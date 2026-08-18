@@ -52,3 +52,16 @@ _smoke.mjs
 
 _test_*.mjs
 _healthcheck.mjs
+
+# LabOS runtime data (PII / secrets / generated - NEVER push to GitHub)
+labos/students.yaml
+labos/exam-seating/
+labos/invoices.json
+labos/submissions.json
+labos/tasks.json
+labos/meetings/
+labos/workload/
+labos/lessons/
+labos/news/
+labos/out/
+labos/reports/s*/

@@ -1,0 +1,32 @@
+# AutoProf LabOS — 学生花名册模板(脱敏)
+# 复制为 students.yaml 并替换为真实数据。students.yaml 已被 .gitignore 排除,不会推送 GitHub。
+students:
+- id: t01
+  name: Teacher
+  project: PI
+  report_path: ''
+  role: teacher
+  password: "changeme"
+  active: true
+- id: s01
+  name: Student One
+  project: 论文撰写与投稿
+  report_path: labos/reports/s01
+  role: grad           # undergrad | grad
+  password: "changeme"
+  active: true
+- id: s02
+  name: Student Two
+  project: 电力系统韧性
+  report_path: labos/reports/s02
+  role: grad
+  password: "changeme"
+  active: true
+- id: s03
+  name: Student Three
+  project: 电动汽车与电网互动
+  report_path: labos/reports/s03
+  role: undergrad
+  password: "changeme"
+  active: true
+  # ... 按此格式继续添加学生
