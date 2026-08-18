@@ -41,6 +41,16 @@ import { createRoom, listRooms, getRoom, addMessage, joinRoom, leaveRoom, delete
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const app = express()
+// Load .env into process.env (no dotenv dependency; matches ai.js direct-read pattern)
+;(function loadEnv() {
+  const envPath = join(__dirname, '.env')
+  if (!existsSync(envPath)) return
+  const raw = readFileSync(envPath, 'utf-8')
+  for (const line of raw.split('\n')) {
+    const m = line.match(/^([A-Z_]+)\s*=\s*(.+)$/)
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].trim().replace(/^["']|["']$/g, '')
+  }
+})()
 const PORT = process.env.PORT || 3000
 
 app.use(express.json({ limit: '2mb' }))
@@ -133,6 +143,20 @@ app.post('/api/logout', (req, res) => {
 
 app.get('/api/me', requireAuth, (req, res) => {
   res.json({ user: req.user })
+})
+
+// --- API: Version ---
+const VERSION_FILE = join(__dirname, '..', 'VERSION')
+let _cachedVersion = null
+app.get('/api/version', (req, res) => {
+  try {
+    if (!_cachedVersion) {
+      _cachedVersion = existsSync(VERSION_FILE) ? readFileSync(VERSION_FILE, 'utf-8').trim() : '0.0.0'
+    }
+    res.json({ version: _cachedVersion, app: 'AutoProf LabOS' })
+  } catch {
+    res.json({ version: '0.0.0', app: 'AutoProf LabOS' })
+  }
 })
 
 // --- API: Students ---

@@ -47,6 +47,8 @@
   </div>
 </div>
 <script src="/js/api.js"></script>
+<div class="version-badge" id="ver-badge" style="text-align:center;color:#999;font-size:12px;margin-top:8px">AutoProf LabOS</div>
+<script>fetch('/api/version').then(r=>r.json()).then(d=>{const el=document.getElementById('ver-badge');if(el)el.textContent='AutoProf LabOS v'+d.version}).catch(()=>{})</script>
 <script src="/js/login.js"></script>
 </body>
 </html>
