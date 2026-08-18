@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoProf - Login</title>
+<link rel="stylesheet" href="/css/app.css">
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+</head>
+<body>
+<div id="app">
+  <div class="login-wrapper">
+    <div class="login-card fade-in">
+      <div class="login-logo">
+        <h1>AutoProf</h1>
+        <p>Lab Brief System</p>
+      </div>
+
+      <div class="role-selector">
+        <button class="role-btn" :class="{active: role==='undergrad'}" @click="role='undergrad'">
+          Undergrad
+        </button>
+        <button class="role-btn" :class="{active: role==='grad'}" @click="role='grad'">
+          Grad
+        </button>
+        <button class="role-btn" :class="{active: role==='teacher'}" @click="role='teacher'">
+          Teacher
+        </button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">ID</label>
+        <input class="form-input" v-model="userId" placeholder="s01, t01..." @keydown.enter="doLogin">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input" type="password" v-model="password" placeholder="Password" @keydown.enter="doLogin">
+      </div>
+
+      <button class="btn btn-primary" style="width:100%" :disabled="loading" @click="doLogin">
+        {{ loading ? 'Logging in...' : 'Login' }}
+      </button>
+
+      <p v-if="error" class="text-center" style="color:var(--danger); margin-top:12px; font-size:13px">{{ error }}</p>
+    </div>
+  </div>
+</div>
+<script src="/js/api.js"></script>
+<script src="/js/login.js"></script>
+</body>
+</html>

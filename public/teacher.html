@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoProf - Teacher Dashboard</title>
+<link rel="stylesheet" href="/css/app.css">
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+<div id="app">
+  <div class="app-header">
+    <span class="title">AutoProf Lab Cockpit</span>
+      <div class="tab-bar">
+      <button class="tab-btn" :class="{active: activeTab==='dashboard'}" @click="switchToDashboard">总览</button>
+      <button class="tab-btn" :class="{active: activeTab==='cockpit'}" @click="activeTab='cockpit'">周报</button>
+      <button class="tab-btn" :class="{active: activeTab==='meeting'}" @click="switchToMeeting">会议</button>
+      <button class="tab-btn" :class="{active: activeTab==='kanban'}" @click="switchToKanban">看板</button>
+      <a class="tab-btn" href="/meeting-live" style="text-decoration:none">实时会议</a>
+      <button class="tab-btn" :class="{active: activeTab==='skills'}" @click="switchToSkills">工具箱</button>
+     <button class="tab-btn" :class="{active: activeTab==='submissions'}" @click="switchToSubmissions">投稿</button>
+      <button class="tab-btn" :class="{active: activeTab==='seating'}" @click="switchToSeating">排座</button>
+      <button class="tab-btn" :class="{active: activeTab==='lesson'}" @click="switchToLesson">备课</button>
+      <button class="tab-btn" :class="{active: activeTab==='workload'}" @click="switchToWorkload">工作量</button>
+      <button class="tab-btn" :class="{active: activeTab==='invoice'}" @click="switchToInvoice">记账</button>
+    </div>
+    <select v-if="activeTab==='cockpit'" class="student-select" v-model="selectedStudentId" @change="onStudentChange">
+      <option value="">Select Student</option>
+      <option v-for="s in students" :key="s.id" :value="s.id">
+        {{ s.id }} - {{ s.name }} {{ s.has_submitted ? '' : '(no report)' }}
+      </option>
+    </select>
+    <span class="spacer"></span>
+    <button class="header-btn" @click="logout">Logout</button>
+  </div>
+
+  <!-- 总览 Dashboard Tab -->
+  <div v-if="activeTab==='dashboard'" class="dashboard-view">
+    <div class="stat-bar" v-if="dashboardData">
+      <span class="stat-pill">👥 {{ dashboardData.stats.total }} 学生</span>
+      <span class="stat-pill">✅ {{ dashboardData.stats.reported }} 已交</span>
+      <span class="stat-pill" :class="{missing: dashboardData.stats.missing > 0}">❌ {{ dashboardData.stats.missing }} 未交</span>
+      <span class="stat-pill stat-overdue" v-if="dashboardData.stats.overdue_tasks > 0">⚠ {{ dashboardData.stats.overdue_tasks }} 逾期</span>
+      <span class="stat-pill" v-if="dashboardData.stats.active_submissions > 0">📄 {{ dashboardData.stats.active_submissions }} 投稿在审</span>
+    </div>
+    <div style="margin:12px 0">
+      <button class="btn btn-primary" @click="generateBrief" :disabled="briefGenerating">
+        {{ briefGenerating ? '生成中...' : '📋 一键生成组会简报' }}
+      </button>
+    </div>
+    <div class="student-grid" v-if="dashboardData">
+      <div class="student-card" v-for="s in dashboardData.students" :key="s.id" @click="goToStudent(s.id)">
+        <div class="card-header-row">
+          <span class="card-name">{{ s.name }}</span>
+          <span class="card-id">{{ s.id }}</span>
+        </div>
+        <div class="card-status" :class="s.report_submitted ? 'status-ok' : 'status-miss'">
+          {{ s.report_submitted ? '✅ 已交' : '❌ 未交' }}
+          <span v-if="s.report_date" class="text-muted" style="font-size:10px">{{ s.report_date }}</span>
+        </div>
+        <div class="card-meta">
+          <span class="card-tasks">📋 {{ s.open_tasks || 0 }} 任务</span>
+          <span class="card-overdue" v-if="s.overdue_tasks > 0">⚠ {{ s.overdue_tasks }} 逾期</span>
+        </div>
+        <div class="card-sub" v-if="s.submission_status">
+          📄 投稿: {{ s.submission_status }}
+        </div>
+        <div class="card-risks" v-if="s.risk_tags && s.risk_tags.length">
+          <span class="card-risk" v-for="(r, i) in s.risk_tags.slice(0, 2)" :key="i">{{ r }}</span>
+        </div>
+        <div class="card-actions" v-if="s.risk_tags && s.risk_tags.length">
+          <button class="btn btn-sm btn-secondary" @click.stop="goToSkill('pre-submission-reviewer')">🔍 审稿检查</button>
+        </div>
+        <div class="card-summary" v-if="s.last_summary">{{ s.last_summary }}</div>
+      </div>
+    </div>
+    <div v-else-if="loadingDashboard" class="loading">加载中...</div>
+    <div v-else class="empty-state">暂无数据</div>
+  </div>
+
+  <!-- 周报 Cockpit Tab -->
+  <div v-if="activeTab==='cockpit'">
+    <div v-if="!selectedStudentId" class="empty-state">
+      Select a student to view their report and chat with AI
+    </div>
+    <div v-else class="split-pane">
+      <div class="pane-left chat-container">
+        <div class="chat-messages" ref="chatMessages">
+          <div v-if="chatMessages.length === 0" class="text-muted text-center" style="padding:40px">
+            Ask AI about this student's report...
+          </div>
+          <div v-for="(msg, i) in chatMessages" :key="i"
+               class="chat-bubble" :class="msg.role">
+            {{ msg.content }}
+          </div>
+        </div>
+        <div class="chat-input-row">
+          <textarea class="chat-input" v-model="chatInput"
+            @keydown.enter.exact.prevent="sendChat"
+            placeholder="Type message and press Enter...">
+          </textarea>
+          <button class="btn btn-primary btn-sm" :disabled="chatStreaming" @click="sendChat">
+            {{ chatStreaming ? '...' : 'Send' }}
+          </button>
+        </div>
+      </div>
+      <div class="pane-right">
+        <div v-if="summary" class="card">
+          <div class="card-title">AI Summary</div>
+          <div class="summary-section">
+            <div class="summary-label">Summary</div>
+            <div class="summary-content">{{ summary.summary }}</div>
+          </div>
+          <div class="summary-section" v-if="summary.risks && summary.risks.length">
+            <div class="summary-label">Risks</div>
+            <ul class="summary-risks"><li v-for="r in summary.risks" :key="r">{{ r }}</li></ul>
+          </div>
+          <div class="summary-section" v-if="summary.suggestions && summary.suggestions.length">
+            <div class="summary-label">Suggestions</div>
+            <ul class="summary-suggestions"><li v-for="s in summary.suggestions" :key="s">{{ s }}</li></ul>
+          </div>
+        </div>
+        <div v-if="report" class="card">
+          <div class="card-title">
+            {{ report.meta.name }} - {{ report.meta.project }}
+            <span class="tag" :class="'tag-' + (report.meta.status || 'on_track').replace('_','-')">
+              {{ report.meta.status || 'on_track' }}
+            </span>
+          </div>
+          <div class="md-preview" v-html="reportHtml" style="border:none; padding:0"></div>
+        </div>
+        <div v-else-if="loadingReport" class="loading">Loading report...</div>
+        <div v-else class="empty-state">No report submitted</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 会议 Tab -->
+  <div v-if="activeTab==='meeting'" class="meeting-view">
+    <div class="meeting-top">
+      <div class="card meeting-upload">
+        <div class="card-title">上传会议纪要</div>
+        <div class="meeting-upload-row">
+          <input type="date" v-model="meetingDate" class="cell-input" style="width:auto">
+          <button class="btn btn-primary btn-sm" :disabled="meetingUploading" @click="uploadMeeting">
+            {{ meetingUploading ? '解析中...' : '上传并 AI 解析' }}
+          </button>
+        </div>
+        <textarea class="md-editor" v-model="meetingContent"
+          placeholder="粘贴听记硬件生成的会议纪要 Markdown..."
+          style="height:180px; margin-top:8px"></textarea>
+        <div v-if="meetingUploadMsg" class="meeting-msg">{{ meetingUploadMsg }}</div>
+      </div>
+      <div class="card meeting-history" v-if="meetings.length">
+        <div class="card-title">会议历史</div>
+        <div v-for="m in meetings" :key="m.date" class="meeting-item"
+             :class="{active: m.date===selectedMeetingDate}" @click="loadMeeting(m.date)">
+          {{ m.date }}
+          <span class="tag" v-if="m.has_actions">{{ m.action_count }} 项</span>
+          <span class="tag tag-warn" v-else>未解析</span>
+        </div>
+      </div>
+    </div>
+    <div v-if="selectedMeeting" class="meeting-detail">
+      <div class="card">
+        <div class="card-title">
+          AI 抽取结果
+          <span class="tag" :class="selectedMeeting.actions && selectedMeeting.actions.status==='ok' ? 'tag-on-track' : 'tag-warn'">
+            {{ selectedMeeting.actions ? selectedMeeting.actions.status : '解析中' }}
+          </span>
+        </div>
+        <div v-if="meetingPolling" class="loading">AI 抽取中,自动刷新...</div>
+        <div v-if="selectedMeeting.actions && selectedMeeting.actions.decisions && selectedMeeting.actions.decisions.length" class="summary-section">
+          <div class="summary-label">决议</div>
+          <ul class="summary-risks"><li v-for="(d,i) in selectedMeeting.actions.decisions" :key="i">{{ d }}</li></ul>
+        </div>
+        <table class="actions-table" v-if="selectedMeeting.actions && selectedMeeting.actions.actions && selectedMeeting.actions.actions.length">
+          <thead>
+            <tr><th>ID</th><th>任务</th><th>负责人</th><th>截止</th><th>状态</th><th>看板</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="a in selectedMeeting.actions.actions" :key="a.task_id" :class="{unmatched: a.unmatched}">
+              <td class="mono">{{ a.task_id }}</td>
+              <td><input class="cell-input" v-model="a.task"></td>
+              <td>
+                <select class="cell-input" v-model="a.owner_student_id" @change="onOwnerChange(a)">
+                  <option value="">(未指派)</option>
+                  <option v-for="s in students" :key="s.id" :value="s.id">{{ s.name }}</option>
+                </select>
+                <span class="tag tag-warn" v-if="a.unmatched">未匹配</span>
+              </td>
+              <td><input type="date" class="cell-input" v-model="a.deadline"></td>
+              <td>
+                <select class="cell-input" v-model="a.status">
+                  <option value="pending">pending</option>
+                  <option value="in_progress">in_progress</option>
+                  <option value="done">done</option>
+                </select>
+              </td>
+              <td>
+                <button class="btn btn-sm btn-secondary" @click="promoteToKanban(selectedMeetingDate, a.task_id)">→看板</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div v-if="!meetingPolling && selectedMeeting.actions && (!selectedMeeting.actions.actions || !selectedMeeting.actions.actions.length)" class="empty-state">无行动项(可能 AI 未抽取到,或未配置 API Key)</div>
+        <button v-if="selectedMeeting.actions && selectedMeeting.actions.actions && selectedMeeting.actions.actions.length"
+          class="btn btn-primary btn-sm" @click="saveActions" :disabled="meetingSaving" style="margin-top:8px">
+          {{ meetingSaving ? '保存中...' : '保存改派' }}
+        </button>
+      </div>
+      <div class="card">
+        <div class="card-title">会议纪要原文</div>
+        <div class="md-preview" v-html="meetingHtml"></div>
+      </div>
+    </div>
+    <div v-else-if="!meetingPolling" class="empty-state">上传会议纪要或从历史中选择一次会议</div>
+  </div>
+
+  <!-- 看板 Tab -->
+  <div v-if="activeTab==='kanban'" class="kanban-view">
+    <!-- 欢迎页:统计 + RSS -->
+    <div class="welcome-row">
+      <div class="welcome-stats" v-if="boardStats">
+        <div class="stat-card"><div class="stat-num">{{ boardStats.total }}</div><div class="stat-label">总任务</div></div>
+        <div class="stat-card"><div class="stat-num">{{ boardStats.byStatus.in_progress || 0 }}</div><div class="stat-label">进行中</div></div>
+        <div class="stat-card stat-overdue" v-if="boardStats.overdue"><div class="stat-num">{{ boardStats.overdue }}</div><div class="stat-label">逾期</div></div>
+      </div>
+      <div class="welcome-news" v-if="news.length">
+        <div class="card-title">每日研究动态 (RSS)</div>
+        <div class="rss-list">
+          <a v-for="(item, i) in news" :key="i" :href="item.link" target="_blank" class="rss-item">
+            <span class="rss-source">{{ item.source }}</span>
+            <span class="rss-title">{{ item.title }}</span>
+          </a>
+        </div>
+        <div v-if="newsError" class="text-muted" style="font-size:11px">{{ newsError }}</div>
+      </div>
+    </div>
+    <!-- 四列看板 -->
+    <div class="kanban-board">
+      <div class="kanban-col" v-for="col in kanbanCols" :key="col.status">
+        <div class="kanban-col-header">
+          {{ col.label }}
+          <span class="tag">{{ tasksByStatus(col.status).length }}</span>
+        </div>
+        <div class="kanban-col-body">
+          <div class="task-card" v-for="t in tasksByStatus(col.status)" :key="t.task_id"
+               :class="'task-priority-' + (t.priority || 'medium')">
+            <div class="task-card-title">{{ t.title }}</div>
+            <div class="task-card-meta">
+              <span v-if="t.owner_name">{{ t.owner_name }}</span>
+              <span v-else class="text-muted">未指派</span>
+              <span v-if="t.deadline" class="task-deadline" :class="{overdue: isOverdue(t)}">{{ t.deadline }}</span>
+            </div>
+            <div class="task-card-footer">
+              <span class="tag tag-source" v-if="t.source">{{ t.source }}</span>
+              <select class="cell-input task-status-select" :value="t.status" @change="updateTaskStatus(t, $event.target.value)">
+                <option value="todo">待办</option>
+                <option value="in_progress">进行中</option>
+                <option value="done">已完成</option>
+                <option value="blocked">阻塞</option>
+              </select>
+              <button class="btn btn-sm btn-secondary" @click="deleteTask(t.task_id)" v-if="user && user.role==='teacher'">删</button>
+              <button class="btn btn-sm btn-secondary" v-if="t.status==='blocked'" @click.stop="goToSkill('idea-evaluator')">💡 评估方向</button>
+            </div>
+          </div>
+          <div v-if="tasksByStatus(col.status).length === 0" class="empty-state" style="padding:16px">无</div>
+        </div>
+      </div>
+    </div>
+    <!-- 新建任务 -->
+    <button class="btn btn-primary" @click="showTaskModal=true" style="margin:12px">+ 新建任务</button>
+    <div class="modal-overlay" v-if="showTaskModal" @click.self="showTaskModal=false">
+      <div class="modal-card">
+        <div class="card-title">新建任务</div>
+        <input class="form-input" v-model="newTask.title" placeholder="任务标题" style="margin-bottom:8px">
+        <select class="form-select" v-model="newTask.owner_student_id" style="margin-bottom:8px">
+          <option value="">(未指派)</option>
+          <option v-for="s in students" :key="s.id" :value="s.id">{{ s.name }}</option>
+        </select>
+        <input type="date" class="form-input" v-model="newTask.deadline" style="margin-bottom:8px">
+        <select class="form-select" v-model="newTask.priority" style="margin-bottom:8px">
+          <option value="high">高</option>
+          <option value="medium">中</option>
+          <option value="low">低</option>
+        </select>
+        <input class="form-input" v-model="newTask.project" placeholder="项目" style="margin-bottom:8px">
+        <div style="display:flex; gap:8px; margin-top:8px">
+          <button class="btn btn-primary btn-sm" @click="createTask">创建</button>
+          <button class="btn btn-secondary btn-sm" @click="showTaskModal=false">取消</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- AI 工具箱 Tab (Feature 6/16) -->
+  <div v-if="activeTab==='skills'" class="skills-view">
+    <div v-if="!selectedSkill" class="review-mode-entry">
+      <button class="btn btn-primary" @click="openReviewMode" style="padding:12px 24px;font-size:15px">
+        🔍 审稿模式 (Pre-Submission Review)
+      </button>
+      <span class="text-muted" style="margin-left:8px;font-size:12px">粘贴论文摘要/章节,AI 做投稿前五维度审查</span>
+    </div>
+    <div v-if="!selectedSkill" class="skills-grid">
+      <div class="skill-card" v-for="s in skillManifest" :key="s.name" @click="selectSkill(s)">
+        <div class="skill-name">{{ s.name }}</div>
+        <div class="skill-desc">{{ s.description }}</div>
+      </div>
+    </div>
+    <div v-else class="split-pane">
+      <div class="pane-left">
+        <div style="margin-bottom:8px">
+          <button class="btn btn-secondary btn-sm" @click="selectedSkill=null">← 返回</button>
+          <span style="margin-left:8px;font-weight:600">{{ selectedSkill.name }}</span>
+        </div>
+        <textarea class="md-editor" v-model="skillInput" :placeholder="skillPlaceholder" style="min-height:220px"></textarea>
+        <button class="btn btn-primary" @click="runSkillAI" :disabled="skillStreaming" style="margin-top:8px">
+          {{ skillStreaming ? 'AI 运行中...' : '运行 AI' }}
+        </button>
+      </div>
+      <div class="pane-right">
+        <div class="card-title">AI 输出</div>
+        <div class="md-preview" v-html="skillOutputHtml"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 投稿追踪 Tab (Feature 22) -->
+  <div v-if="activeTab==='submissions'" class="submissions-view">
+    <div class="welcome-row" v-if="submissionStats">
+      <div class="stat-card"><div class="stat-num">{{ submissionStats.total }}</div><div class="stat-label">总投稿</div></div>
+      <div class="stat-card" v-for="s in submissionStats.statuses" :key="s">
+        <div class="stat-num">{{ submissionStats.by_status[s] || 0 }}</div>
+        <div class="stat-label">{{ s }}</div>
+      </div>
+    </div>
+    <button class="btn btn-primary" @click="showSubModal=true" style="margin:12px">+ 新建投稿</button>
+    <table class="actions-table" v-if="submissions.length">
+      <thead><tr><th>ID</th><th>标题</th><th>期刊</th><th>状态</th><th>截止</th><th>负责人</th><th>操作</th></tr></thead>
+      <tbody>
+        <tr v-for="s in submissions" :key="s.id">
+          <td class="mono">{{ s.id }}</td>
+          <td><input class="cell-input" v-model="s.title" @change="updateSub(s)"></td>
+          <td><input class="cell-input" v-model="s.journal" @change="updateSub(s)"></td>
+          <td>
+            <select class="cell-input" v-model="s.status" @change="updateSub(s)">
+              <option v-for="st in subStatuses" :key="st" :value="st">{{ st }}</option>
+            </select>
+          </td>
+          <td><input type="date" class="cell-input" v-model="s.deadline" @change="updateSub(s)"></td>
+          <td>
+            <select class="cell-input" v-model="s.owner_student_id" @change="updateSub(s)">
+              <option value="">(未指派)</option>
+              <option v-for="st in students" :key="st.id" :value="st.id">{{ st.name }}</option>
+            </select>
+          </td>
+          <td><button class="btn btn-sm btn-secondary" @click="deleteSub(s.id)">删</button></td>
+        </tr>
+      </tbody>
+    </table>
+    <div v-else class="empty-state" style="padding:24px">暂无投稿记录</div>
+    <div class="modal-overlay" v-if="showSubModal" @click.self="showSubModal=false">
+      <div class="modal-card">
+        <div class="card-title">新建投稿</div>
+        <input class="form-input" v-model="newSub.title" placeholder="论文标题" style="margin-bottom:8px">
+        <input class="form-input" v-model="newSub.journal" placeholder="目标期刊" style="margin-bottom:8px">
+        <input type="date" class="form-input" v-model="newSub.deadline" style="margin-bottom:8px">
+        <select class="form-select" v-model="newSub.owner_student_id" style="margin-bottom:8px">
+          <option value="">(未指派)</option>
+          <option v-for="s in students" :key="s.id" :value="s.id">{{ s.name }}</option>
+        </select>
+        <div style="display:flex; gap:8px; margin-top:8px">
+          <button class="btn btn-primary btn-sm" @click="createSub">创建</button>
+         <button class="btn btn-secondary btn-sm" @click="showSubModal=false">取消</button>
+       </div>
+     </div>
+   </div>
+ </div>
+
+  <!-- 考试排座 Tab (Feature 11) -->
+  <div v-if="activeTab==='seating'" class="seating-view">
+    <div class="form-row">
+      <input class="form-input" v-model.number="seatingRows" type="number" placeholder="行数" style="width:80px">
+      <input class="form-input" v-model.number="seatingCols" type="number" placeholder="列数" style="width:80px">
+      <select class="form-select" v-model="seatingMode" style="width:120px">
+        <option value="snake">S型排列</option>
+        <option value="serial">顺序排列</option>
+        <option value="random">随机排列</option>
+      </select>
+      <input class="form-input" v-model="seatingExamName" placeholder="考试名称" style="flex:1">
+    </div>
+    <textarea class="md-editor" v-model="seatingNames" placeholder="学生名单，每行一个姓名" style="min-height:150px;margin-top:8px"></textarea>
+    <button class="btn btn-primary" @click="generateSeating" :disabled="seatingLoading" style="margin-top:8px">
+      {{ seatingLoading ? '生成中...' : '生成座位图' }}
+    </button>
+    <div v-if="seatingResult" class="seating-grid" style="margin-top:12px">
+      <div class="seating-row" v-for="(row, ri) in seatingResult.arrangement" :key="ri">
+        <div class="seat" v-for="seat in row" :key="seat.seat">
+          <div class="seat-num">{{ seat.seat }}</div>
+          <div class="seat-name">{{ seat.name || '---' }}</div>
+        </div>
+      </div>
+      <button class="btn btn-secondary btn-sm" @click="window.print()" style="margin-top:8px">打印</button>
+    </div>
+    <div v-if="seatingHistory.length" style="margin-top:16px">
+      <div class="card-title">历史座位图</div>
+      <div v-for="s in seatingHistory" :key="s.exam_id" class="list-item">
+        {{ s.exam_name || s.exam_id }} - {{ s.rows }}x{{ s.cols }} ({{ s.assigned }}人)
+        <button class="btn btn-sm btn-secondary" @click="loadSeatingDetail(s.exam_id)">查看</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 备课 Tab (Feature 15) -->
+  <div v-if="activeTab==='lesson'" class="lesson-view">
+    <div class="form-row">
+      <input class="form-input" v-model="lessonCourse" placeholder="课程名称" style="flex:1">
+      <input class="form-input" v-model="lessonChapter" placeholder="章节" style="flex:1">
+    </div>
+    <div class="form-row" style="margin-top:8px">
+      <input class="form-input" v-model="lessonTopic" placeholder="主题" style="flex:1">
+      <input class="form-input" v-model="lessonTextbook" placeholder="教材参考(可选)" style="flex:1">
+    </div>
+    <textarea class="md-editor" v-model="lessonExtra" placeholder="补充说明(可选)" style="min-height:60px;margin-top:8px"></textarea>
+    <button class="btn btn-primary" @click="generateLessonPlan" :disabled="lessonStreaming" style="margin-top:8px">
+      {{ lessonStreaming ? 'AI 生成中...' : '生成教案' }}
+    </button>
+    <div v-if="lessonOutput" class="md-preview" style="margin-top:12px" v-html="lessonOutputHtml"></div>
+    <div v-if="lessonHistory.length" style="margin-top:16px">
+      <div class="card-title">已保存教案</div>
+      <div v-for="l in lessonHistory" :key="l.filename" class="list-item">
+        {{ l.filename }} ({{ l.size }} chars)
+        <button class="btn btn-sm btn-secondary" @click="loadLessonDetail(l.filename)">查看</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 工作量 Tab (Feature 13) -->
+  <div v-if="activeTab==='workload'" class="workload-view">
+    <div class="form-row">
+      <input class="form-input" v-model="workloadYear" placeholder="年份 2026" style="width:120px">
+      <button class="btn btn-primary" @click="calcWorkload" style="margin-left:8px">计算</button>
+      <button class="btn btn-secondary" @click="loadCoeffs" style="margin-left:8px">编辑系数</button>
+    </div>
+    <div v-if="workloadResult" style="margin-top:12px">
+      <div class="welcome-row">
+        <div class="stat-card"><div class="stat-num">{{ workloadResult.teaching_points }}</div><div class="stat-label">教学</div></div>
+        <div class="stat-card"><div class="stat-num">{{ workloadResult.research_points }}</div><div class="stat-label">科研</div></div>
+        <div class="stat-card"><div class="stat-num">{{ workloadResult.total_points }}</div><div class="stat-label">总计</div></div>
+      </div>
+      <details style="margin-top:8px"><summary>教学明细</summary>
+        <table class="actions-table"><thead><tr><th>课程</th><th>类型</th><th>学时</th><th>系数</th><th>得分</th></tr></thead>
+        <tbody><tr v-for="d in workloadResult.teaching_details" :key="d.name"><td>{{ d.name }}</td><td>{{ d.type }}</td><td>{{ d.hours }}</td><td>{{ d.type_factor }}x{{ d.size_factor }}</td><td>{{ d.points }}</td></tr></tbody></table>
+      </details>
+      <details style="margin-top:4px"><summary>科研明细</summary>
+        <table class="actions-table"><thead><tr><th>项目</th><th>级别</th><th>系数</th><th>得分</th></tr></thead>
+        <tbody><tr v-for="d in workloadResult.research_details" :key="d.name||d.title"><td>{{ d.name||d.title||d.type }}</td><td>{{ d.tier||d.level||d.type }}</td><td>{{ d.factor }}</td><td>{{ d.points }}</td></tr></tbody></table>
+      </details>
+    </div>
+    <div style="margin-top:12px">
+      <div class="card-title">教学工作量输入</div>
+      <div v-for="(c, i) in wlCourses" :key="i" class="form-row">
+        <input class="form-input" v-model="c.name" placeholder="课程名" style="flex:2">
+        <select class="form-select" v-model="c.type" style="width:100px"><option value="theory">理论</option><option value="experiment">实验</option><option value="practice">实践</option><option value="seminar">研讨</option></select>
+        <input class="form-input" v-model.number="c.hours" type="number" placeholder="学时" style="width:80px">
+        <select class="form-select" v-model="c.size_class" style="width:100px"><option value="small">小班</option><option value="medium">中班</option><option value="large">大班</option></select>
+      </div>
+      <button class="btn btn-sm btn-secondary" @click="wlCourses.push({name:'',type:'theory',hours:0,size_class:'medium'})">+ 课程</button>
+    </div>
+  </div>
+
+  <!-- 记账 Tab (Feature 14) -->
+  <div v-if="activeTab==='invoice'" class="invoice-view">
+    <div v-if="invoiceStats" class="welcome-row">
+      <div class="stat-card"><div class="stat-num">{{ invoiceStats.count }}</div><div class="stat-label">笔数</div></div>
+      <div class="stat-card"><div class="stat-num">{{ invoiceStats.total }}</div><div class="stat-label">总额</div></div>
+    </div>
+    <button class="btn btn-primary" @click="showInvoiceModal=true" style="margin:12px">+ 记一笔</button>
+    <table class="actions-table" v-if="invoices.length">
+      <thead><tr><th>日期</th><th>金额</th><th>类别</th><th>说明</th><th>供应商</th><th>操作</th></tr></thead>
+      <tbody>
+        <tr v-for="inv in invoices" :key="inv.id">
+          <td>{{ inv.date }}</td>
+          <td>{{ inv.amount }}</td>
+          <td><input class="cell-input" v-model="inv.category" @change="updateInvoice(inv)"></td>
+          <td><input class="cell-input" v-model="inv.description" @change="updateInvoice(inv)"></td>
+          <td><input class="cell-input" v-model="inv.vendor" @change="updateInvoice(inv)"></td>
+          <td><button class="btn btn-sm btn-secondary" @click="delInvoice(inv.id)">删</button></td>
+        </tr>
+      </tbody>
+    </table>
+    <div v-else class="empty-state" style="padding:24px">暂无记录</div>
+    <div class="modal-overlay" v-if="showInvoiceModal" @click.self="showInvoiceModal=false">
+      <div class="modal-card">
+        <div class="card-title">记一笔</div>
+        <input type="date" class="form-input" v-model="newInvoice.date" style="margin-bottom:8px">
+        <input class="form-input" v-model.number="newInvoice.amount" type="number" placeholder="金额" style="margin-bottom:8px">
+        <select class="form-select" v-model="newInvoice.category" style="margin-bottom:8px">
+          <option value="">选择类别</option>
+          <option value="办公用品">办公用品</option>
+          <option value="差旅">差旅</option>
+          <option value="实验耗材">实验耗材</option>
+          <option value="会议">会议</option>
+          <option value="其他">其他</option>
+        </select>
+        <input class="form-input" v-model="newInvoice.description" placeholder="说明" style="margin-bottom:8px">
+        <input class="form-input" v-model="newInvoice.vendor" placeholder="供应商(可选)" style="margin-bottom:8px">
+        <div style="display:flex; gap:8px; margin-top:8px">
+          <button class="btn btn-primary btn-sm" @click="addInvoiceRecord">保存</button>
+          <button class="btn btn-secondary btn-sm" @click="showInvoiceModal=false">取消</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/js/api.js"></script>
+<script src="/js/teacher.js"></script>
+</body>
+</html>

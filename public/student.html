@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoProf - Student</title>
+<link rel="stylesheet" href="/css/app.css">
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+<div id="app">
+  <div class="app-header">
+    <span class="title">AutoProf</span>
+    <div class="tab-bar">
+      <button class="tab-btn" :class="{active: activeTab==='report'}" @click="activeTab='report'">周报</button>
+      <button class="tab-btn" :class="{active: activeTab==='kanban'}" @click="switchToKanban">看板</button>
+      <button class="tab-btn" :class="{active: activeTab==='skills'}" @click="switchToSkills">工具箱</button>
+    </div>
+    <span class="user-info" v-if="user">{{ user.name }} - {{ roleLabel }}</span>
+    <span class="spacer"></span>
+    <button class="header-btn" @click="logout">Logout</button>
+  </div>
+
+  <!-- 周报 Tab -->
+  <div v-if="activeTab==='report'">
+    <div style="padding:12px; display:flex; gap:8px;">
+      <button class="btn btn-secondary btn-sm" @click="loadTemplate">Template</button>
+      <button class="btn btn-secondary btn-sm" @click="clearEditor">Clear</button>
+      <button class="btn btn-secondary btn-sm" @click="toggleActions">我的会议行动<span v-if="myActions.length"> ({{ myActions.length }})</span></button>
+      <button class="btn btn-primary btn-sm" :disabled="draftLoading" @click="generateDraft">
+        {{ draftLoading ? 'AI 生成中...' : '🤖 AI 辅助填写' }}
+      </button>
+      <span class="spacer" style="flex:1"></span>
+      <button class="btn btn-primary btn-sm" :disabled="submitting" @click="doSubmit">
+        {{ submitting ? 'Submitting...' : 'Submit Report' }}
+      </button>
+    </div>
+    <div v-if="showActions" class="card" style="margin:0 12px 12px">
+      <div class="card-title">我的会议行动 <span class="tag" v-if="myActions.length">{{ myActions.length }}</span></div>
+      <div v-if="actionsLoading" class="loading">加载中...</div>
+      <table class="actions-table" v-if="myActions.length">
+        <thead><tr><th>ID</th><th>任务</th><th>截止</th><th>状态</th><th>会议</th></tr></thead>
+        <tbody>
+          <tr v-for="a in myActions" :key="a.task_id">
+            <td class="mono">{{ a.task_id }}</td>
+            <td>{{ a.task }}</td>
+            <td>{{ a.deadline || '-' }}</td>
+            <td><span class="tag" :class="a.status==='done' ? 'tag-on-track' : a.status==='in_progress' ? 'tag-discussion' : 'tag-at-risk'">{{ a.status }}</span></td>
+            <td>{{ a.meeting_date }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div v-else class="empty-state" style="padding:16px">暂无分配给你的会议行动项</div>
+    </div>
+    <div class="split-pane" style="height:calc(100vh - 100px)">
+      <div class="pane-left" style="display:flex; flex-direction:column">
+        <textarea class="md-editor" v-model="markdown" @input="updatePreview"
+          placeholder="Type your bi-weekly report in Markdown..."></textarea>
+      </div>
+      <div class="pane-right">
+        <div class="md-preview" v-html="previewHtml"></div>
+      </div>
+    </div>
+    <div v-if="summary" class="card" style="position:fixed; bottom:0; left:0; right:0; max-height:40%; overflow-y:auto; z-index:200">
+      <div class="card-title">AI Summary</div>
+      <div class="summary-section">
+        <div class="summary-label">Summary</div>
+        <div class="summary-content">{{ summary.summary }}</div>
+      </div>
+      <div class="summary-section" v-if="summary.risks && summary.risks.length">
+        <div class="summary-label">Risks</div>
+        <ul class="summary-risks"><li v-for="r in summary.risks" :key="r">{{ r }}</li></ul>
+      </div>
+      <div class="summary-section" v-if="summary.suggestions && summary.suggestions.length">
+        <div class="summary-label">Suggestions for Advisor</div>
+        <ul class="summary-suggestions"><li v-for="s in summary.suggestions" :key="s">{{ s }}</li></ul>
+      </div>
+      <div class="f6-suggestion" v-if="showPolishSuggestion">
+        <span style="font-size:12px;color:#07C160">💡 建议用 paper-polish 润色英文</span>
+        <button class="btn btn-sm btn-primary" @click="goToSkill('paper-polish')">去润色</button>
+      </div>
+      <button class="btn btn-secondary btn-sm" style="margin-top:8px" @click="summary=null">Close</button>
+    </div>
+    <div v-if="summaryLoading" class="toast blink">AI is generating summary...</div>
+  </div>
+
+  <!-- 看板 Tab (学生:只看自己的任务,只能改状态) -->
+  <div v-if="activeTab==='kanban'" class="kanban-view">
+    <div class="kanban-board">
+      <div class="kanban-col" v-for="col in kanbanCols" :key="col.status">
+        <div class="kanban-col-header">
+          {{ col.label }}
+          <span class="tag">{{ myTasksByStatus(col.status).length }}</span>
+        </div>
+        <div class="kanban-col-body">
+          <div class="task-card" v-for="t in myTasksByStatus(col.status)" :key="t.task_id"
+               :class="'task-priority-' + (t.priority || 'medium')">
+            <div class="task-card-title">{{ t.title }}</div>
+            <div class="task-card-meta">
+              <span v-if="t.owner_name">{{ t.owner_name }}</span>
+              <span v-if="t.deadline" class="task-deadline" :class="{overdue: isOverdue(t)}">{{ t.deadline }}</span>
+            </div>
+            <div class="task-card-footer">
+              <span class="tag tag-source" v-if="t.source">{{ t.source }}</span>
+              <select class="cell-input task-status-select" :value="t.status" @change="updateTaskStatus(t, $event.target.value)">
+                <option value="todo">待办</option>
+                <option value="in_progress">进行中</option>
+                <option value="done">已完成</option>
+                <option value="blocked">阻塞</option>
+              </select>
+            </div>
+          </div>
+          <div v-if="myTasksByStatus(col.status).length === 0" class="empty-state" style="padding:16px">无</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI 工具箱 Tab (Feature 6/16) -->
+  <div v-if="activeTab==='skills'" class="skills-view">
+    <div v-if="!selectedSkill" class="skills-grid">
+      <div class="skill-card" v-for="s in skillManifest" :key="s.name" @click="selectSkill(s)">
+        <div class="skill-name">{{ s.name }}</div>
+        <div class="skill-desc">{{ s.description }}</div>
+      </div>
+    </div>
+    <div v-else class="split-pane">
+      <div class="pane-left">
+        <div style="margin-bottom:8px">
+          <button class="btn btn-secondary btn-sm" @click="selectedSkill=null">← 返回</button>
+          <span style="margin-left:8px;font-weight:600">{{ selectedSkill.name }}</span>
+        </div>
+        <textarea class="md-editor" v-model="skillInput" :placeholder="skillPlaceholder" style="min-height:220px"></textarea>
+        <button class="btn btn-primary" @click="runSkillAI" :disabled="skillStreaming" style="margin-top:8px">
+          {{ skillStreaming ? 'AI 运行中...' : '运行 AI' }}
+        </button>
+      </div>
+      <div class="pane-right">
+        <div class="card-title">AI 输出</div>
+        <div class="md-preview" v-html="skillOutputHtml"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/js/api.js"></script>
+<script src="/js/student.js"></script>
+</body>
+</html>

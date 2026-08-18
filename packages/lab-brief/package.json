@@ -1,0 +1,13 @@
+{
+  "name": "@labos/plugin-lab-brief",
+  "description": "LabOS Bi-Weekly Report Manager: parse, risk-score, and generate LabBrief",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "lib/index.js",
+  "files": ["lib"],
+  "dependencies": {
+    "cordis": "^4.0.0-rc.8",
+    "cosmokit": "^1.8.1",
+    "js-yaml": "^4.1.0"
+  }
+}

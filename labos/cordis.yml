@@ -1,0 +1,13 @@
+plugins:
+  - id: timer
+    name: '@cordisjs/plugin-timer'
+  - id: logger
+    name: '@cordisjs/plugin-logger-console'
+  - id: lab-brief
+    name: './packages/lab-brief/lib'
+    config:
+      students_file: "labos/students.yaml"
+      reports_dir: "labos/reports"
+      output_dir: "labos/out"
+      watch: false
+      debounce_ms: 2000
