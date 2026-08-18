@@ -15,8 +15,9 @@
     <div class="tab-bar">
       <button class="tab-btn" :class="{active: activeTab==='report'}" @click="activeTab='report'">周报</button>
       <button class="tab-btn" :class="{active: activeTab==='kanban'}" @click="switchToKanban">看板</button>
-      <button class="tab-btn" :class="{active: activeTab==='skills'}" @click="switchToSkills">工具箱</button>
-    </div>
+<button class="tab-btn" :class="{active: activeTab==='skills'}" @click="switchToSkills">工具箱</button>
+<button class="tab-btn" :class="{active: activeTab==='interview'}" @click="switchToInterview">面试练习</button>
+</div>
     <span class="user-info" v-if="user">{{ user.name }} - {{ roleLabel }}</span>
     <span class="spacer"></span>
     <button class="header-btn" @click="logout">Logout</button>
@@ -140,6 +141,45 @@
         <div class="card-title">AI 输出</div>
         <div class="md-preview" v-html="skillOutputHtml"></div>
       </div>
+    </div>
+  </div>
+</div>
+<div v-if="activeTab==='interview'" class="interview-view">
+  <div class="card">
+    <div class="card-title">AI 面试/答辩练习</div>
+    <div class="form-row">
+      <select v-model="interviewScenario" class="form-input" style="width:auto">
+        <option value="">选择场景</option>
+        <option value="thesis_defense">学位论文答辩</option>
+        <option value="project_defense">项目答辩</option>
+        <option value="job_interview">求职面试</option>
+        <option value="qa_practice">通用问答练习</option>
+      </select>
+      <input v-model="interviewTopic" class="form-input" placeholder="主题（如：V2G 恢复策略）" />
+    </div>
+    <div class="form-row">
+      <textarea v-model="interviewContext" class="form-input" rows="2" placeholder="背景信息（可选）"></textarea>
+    </div>
+    <div style="display:flex; gap:8px">
+      <button class="btn btn-primary" @click="startInterview" :disabled="!interviewScenario || interviewStreaming">开始练习</button>
+      <button class="btn btn-secondary" @click="interviewHistory=[]; interviewStreamText=''">清空</button>
+    </div>
+  </div>
+  <div class="interview-chat">
+    <div v-for="(msg, i) in interviewHistory" :key="i" :class="['chat-bubble', msg.role==='assistant' ? 'ai' : 'user']">
+      <div style="white-space:pre-wrap">{{ msg.content }}</div>
+    </div>
+    <div v-if="interviewStreaming" class="chat-bubble ai">
+      <div style="white-space:pre-wrap">{{ interviewStreamText }}</div>
+    </div>
+  </div>
+  <div class="card" v-if="interviewHistory.length > 0 && !interviewStreaming">
+    <div class="form-row">
+      <textarea v-model="interviewAnswer" class="form-input" rows="3" placeholder="输入你的回答... (Ctrl+Enter 发送)"></textarea>
+    </div>
+    <div style="display:flex; gap:8px">
+      <button class="btn btn-primary" @click="sendInterviewAnswer" :disabled="!interviewAnswer.trim()">发送回答</button>
+      <button class="btn btn-secondary" @click="sendInterviewCoach">推荐回答策略</button>
     </div>
   </div>
 </div>

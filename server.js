@@ -762,6 +762,42 @@ app.get('/api/rooms/:id/stream', requireAuth, (req, res) => {
   req.on('close', () => removeClient())
 })
 
+// --- API: AI 面试/答辩 (Feature 20) ---
+app.get('/api/interview/scenarios', requireAuth, (req, res) => {
+  res.json({ scenarios: getInterviewScenarios() })
+})
+
+app.post('/api/interview', requireAuth, async (req, res) => {
+  const { action, scenario, topic, context, history, answer, coachMode } = req.body
+  if (!action || !scenario) {
+    return res.status(400).json({ error: 'action and scenario required' })
+  }
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Connection', 'keep-alive')
+  res.flushHeaders()
+  try {
+    const params = { scenario, topic, context }
+    if (action === 'start') {
+      await startInterview(params, (chunk) => {
+        res.write(`data: ${JSON.stringify({ chunk })}\n\n`)
+      })
+    } else if (action === 'continue') {
+      await continueInterview({ ...params, history: history || [], answer: answer || '', coachMode }, (chunk) => {
+        res.write(`data: ${JSON.stringify({ chunk })}\n\n`)
+      })
+    } else {
+      res.write(`data: ${JSON.stringify({ error: 'action must be start or continue' })}\n\n`)
+    }
+    res.write(`data: ${JSON.stringify({ done: true })}\n\n`)
+    res.end()
+  } catch (e) {
+    console.error('[interview] error:', e.message)
+    res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`)
+    res.end()
+  }
+})
+
 // --- Start ---
 const server = app.listen(PORT, () => {
   console.log(`\n  AutoProf Lab Brief v2 ready:`)
@@ -800,6 +836,7 @@ wss.on('connection', (ws) => {
   })
 })
 import { loadSkillManifest, runSkill } from './lib/skills.js'
+import { getScenarios as getInterviewScenarios, startInterview, continueInterview } from './lib/interview.js'
 // --- API: AI 工具箱 (Feature 6/16) ---
 app.get('/api/skills', requireAuth, (req, res) => {
   const manifest = loadSkillManifest()

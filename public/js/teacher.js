@@ -508,6 +508,86 @@ createApp({
        } catch (e) { showToast('删除失败: ' + e.message) }
      }
 
+    // 面试/答辩 (Feature 20)
+    const interviewScenario = ref('')
+    const interviewTopic = ref('')
+    const interviewContext = ref('')
+    const interviewHistory = ref([])
+    const interviewAnswer = ref('')
+    const interviewStreaming = ref(false)
+    const interviewStreamText = ref('')
+
+    function switchToInterview() { activeTab.value = 'interview' }
+
+    async function startInterview() {
+      if (!interviewScenario.value) return
+      interviewHistory.value = []
+      interviewStreamText.value = ''
+      interviewStreaming.value = true
+      await streamChat('/api/interview', {
+        action: 'start', scenario: interviewScenario.value,
+        topic: interviewTopic.value, context: interviewContext.value,
+      }, (chunk) => { interviewStreamText.value += chunk },
+      () => {
+        if (interviewStreamText.value) interviewHistory.value.push({ role: 'assistant', content: interviewStreamText.value })
+        interviewStreamText.value = ''
+        interviewStreaming.value = false
+      }, (err) => {
+        showToast('AI 错误: ' + err)
+        if (interviewStreamText.value) interviewHistory.value.push({ role: 'assistant', content: interviewStreamText.value })
+        interviewStreamText.value = ''
+        interviewStreaming.value = false
+      })
+    }
+
+    async function sendInterviewAnswer() {
+      if (!interviewAnswer.value.trim() || interviewStreaming.value) return
+      const answer = interviewAnswer.value
+      interviewHistory.value.push({ role: 'user', content: answer })
+      interviewAnswer.value = ''
+      interviewStreamText.value = ''
+      interviewStreaming.value = true
+      const hist = interviewHistory.value.slice(0, -1).map(m => ({ role: m.role, content: m.content }))
+      await streamChat('/api/interview', {
+        action: 'continue', scenario: interviewScenario.value,
+        topic: interviewTopic.value, context: interviewContext.value,
+        history: hist, answer,
+      }, (chunk) => { interviewStreamText.value += chunk },
+      () => {
+        if (interviewStreamText.value) interviewHistory.value.push({ role: 'assistant', content: interviewStreamText.value })
+        interviewStreamText.value = ''
+        interviewStreaming.value = false
+      }, (err) => {
+        showToast('AI 错误: ' + err)
+        if (interviewStreamText.value) interviewHistory.value.push({ role: 'assistant', content: interviewStreamText.value })
+        interviewStreamText.value = ''
+        interviewStreaming.value = false
+      })
+    }
+
+    async function sendInterviewCoach() {
+      if (interviewStreaming.value) return
+      interviewHistory.value.push({ role: 'user', content: '[请求推荐回答策略]' })
+      interviewStreamText.value = ''
+      interviewStreaming.value = true
+      const hist = interviewHistory.value.slice(0, -1).map(m => ({ role: m.role, content: m.content }))
+      await streamChat('/api/interview', {
+        action: 'continue', scenario: interviewScenario.value,
+        topic: interviewTopic.value, context: interviewContext.value,
+        history: hist, answer: '', coachMode: true,
+      }, (chunk) => { interviewStreamText.value += chunk },
+      () => {
+        if (interviewStreamText.value) interviewHistory.value.push({ role: 'assistant', content: interviewStreamText.value })
+        interviewStreamText.value = ''
+        interviewStreaming.value = false
+      }, (err) => {
+        showToast('AI 错误: ' + err)
+        if (interviewStreamText.value) interviewHistory.value.push({ role: 'assistant', content: interviewStreamText.value })
+        interviewStreamText.value = ''
+        interviewStreaming.value = false
+      })
+    }
+
     return {
       user, students, selectedStudentId, report, summary, chatMessages,
       chatInput, chatStreaming, loadingReport, reportHtml, chatMessagesEl,
@@ -543,6 +623,10 @@ createApp({
       // 记账
       invoices, invoiceStats, showInvoiceModal, newInvoice,
       switchToInvoice, addInvoiceRecord, updateInvoice, delInvoice,
+      // 面试
+      interviewScenario, interviewTopic, interviewContext,
+      interviewHistory, interviewAnswer, interviewStreaming, interviewStreamText,
+      switchToInterview, startInterview, sendInterviewAnswer, sendInterviewCoach,
     }
   },
 }).mount('#app')

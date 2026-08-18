@@ -49,3 +49,6 @@ labos/summaries/
 # Temp scratch files
 _test-*.mjs
 _smoke.mjs
+
+_test_*.mjs
+_healthcheck.mjs
