@@ -65,3 +65,6 @@ labos/lessons/
 labos/news/
 labos/out/
 labos/reports/s*/
+
+# Validation reports (contain student PII)
+labos/validation-report-*.md
