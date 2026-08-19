@@ -6,12 +6,27 @@
 <title>AutoProf - 实时会议</title>
 <link rel="stylesheet" href="/css/app.css">
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
 <div id="app">
   <div class="app-header">
-    <span class="title">AutoProf 实时会议</span>
-    <a class="tab-btn" href="/teacher" style="text-decoration:none">← 返回</a>
+    <span class="title">AutoProf Lab Cockpit</span>
+    <div class="tab-bar">
+      <a class="tab-btn" href="/teacher" style="text-decoration:none">总览</a>
+      <a class="tab-btn" href="/teacher" style="text-decoration:none">周报</a>
+      <a class="tab-btn" href="/teacher" style="text-decoration:none">会议</a>
+      <a class="tab-btn" href="/teacher" style="text-decoration:none">看板</a>
+      <a class="tab-btn active" href="/meeting-live" style="text-decoration:none">实时会议</a>
+      <a class="tab-btn" href="/teacher" style="text-decoration:none">工具箱</a>
+      <a class="tab-btn" href="/teacher" style="text-decoration:none">投稿</a>
+      <a class="tab-btn" href="/teacher" style="text-decoration:none">排座</a>
+      <a class="tab-btn" href="/teacher" style="text-decoration:none">备课</a>
+      <a class="tab-btn" href="/teacher" style="text-decoration:none">工作量</a>
+      <a class="tab-btn" href="/teacher" style="text-decoration:none">记账</a>
+      <a class="tab-btn" href="/teacher" style="text-decoration:none">面试</a>
+      <a class="tab-btn" href="/teacher" style="text-decoration:none">价值链</a>
+    </div>
     <span class="spacer"></span>
     <span class="live-status">{{ statusText }}</span>
     <button class="header-btn" @click="logout">退出</button>
@@ -36,7 +51,7 @@
       <button class="btn btn-secondary" @click="stopMeeting" :disabled="!recording">
         ⏹ 结束
       </button>
-      <button class="btn btn-primary" @click="generateActions" :disabled="extracting || !transcript.trim()">
+      <button class="btn btn-primary" @click="generateActions" :disabled="extracting">
         {{ extracting ? 'AI 抽取中...' : '🤖 AI 总结+抽取行动' }}
       </button>
       <span class="live-status" v-if="meetingDate">{{ meetingDate }}</span>
@@ -44,17 +59,29 @@
 
     <!-- 实时转写 -->
     <div class="live-transcript">
-      <div v-if="!transcript && !interim" class="empty-state" style="padding:40px">
-        点击「开始会议」启动实时语音转写
+      <div v-if="!transcript && !interim && !recording" class="empty-state" style="padding:40px">
+        点击「开始会议」启动实时语音转写。<br>
+        <span style="font-size:12px;color:var(--text-muted)">需要 Chrome/Edge 浏览器并允许麦克风访问</span>
+      </div>
+      <div v-if="recording && !transcript" style="padding:20px;text-align:center;color:var(--text-muted)">
+        🔴 正在录音... 请开始发言
       </div>
       <span>{{ transcript }}</span>
       <span class="live-interim">{{ interim }}</span>
+    </div>
+
+    <!-- 轮询进度 -->
+    <div v-if="extracting" class="card" style="margin-top:12px;padding:10px 14px">
+      <span style="font-size:13px;color:var(--text-muted)">AI 正在分析会议内容... ({{ pollCount }}/30)</span>
     </div>
 
     <!-- AI 抽取结果 -->
     <div class="live-actions" v-if="actions">
       <div class="card" style="margin-top:12px">
         <div class="card-title">AI 抽取结果 ({{ actions.status }})</div>
+        <div v-if="actions.error" style="color:#e74c3c;font-size:13px;margin:8px 0">
+          错误: {{ actions.error }}
+        </div>
         <div v-if="actions.decisions && actions.decisions.length" style="margin:8px 0">
           <div class="summary-label">决议</div>
           <ul class="summary-risks">
@@ -81,7 +108,9 @@
             </tbody>
           </table>
         </div>
-        <div v-else class="empty-state" style="padding:16px">无行动项</div>
+        <div v-else class="empty-state" style="padding:16px">
+          {{ actions.status === 'no_api_key' ? '未配置 DeepSeek API Key，请在 .env 中设置' : '无行动项' }}
+        </div>
       </div>
     </div>
   </div>

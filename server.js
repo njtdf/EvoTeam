@@ -400,6 +400,14 @@ app.get('/api/dashboard', requireRole('teacher'), (req, res) => {
    saveMeeting(date, content)
    runExtraction(date).catch(e => {
      console.error('[meeting] extract failed:', e.message)
+      saveActions(date, {
+        date,
+        generated_at: new Date().toISOString(),
+        status: 'error',
+        error: e.message,
+        decisions: [],
+        actions: [],
+      })
    })
    res.json({ ok: true, date, message: 'Meeting saved. AI extraction in progress.' })
  })

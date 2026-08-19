@@ -12,12 +12,13 @@ createApp({
     const extracting = ref(false)
     const actions = ref(null)
     const meetingDate = ref('')
+    const pollCount = ref(0)
     let recognition = null
 
     const statusText = computed(() => {
-      if (extracting.value) return 'AI 抽取中'
+      if (extracting.value) return 'AI 抽取中 (' + pollCount.value + '/30)'
       if (recording.value) return '录音中'
-      if (actions.value) return '已抽取 ' + actions.value.actions.length + ' 行动项'
+      if (actions.value) return '已抽取 ' + (actions.value.actions?.length || 0) + ' 行动项'
       return '就绪'
     })
 
@@ -45,7 +46,9 @@ createApp({
           interim.value = interimText
         }
         recognition.onerror = (e) => {
-          if (e.error !== 'no-speech') showToast('语音识别错误: ' + e.error)
+          if (e.error !== 'no-speech' && e.error !== 'aborted') {
+            showToast('语音识别错误: ' + e.error)
+          }
         }
         recognition.onend = () => {
           // 浏览器会自动断开,continuous 模式下重连
@@ -84,10 +87,11 @@ createApp({
 
     async function generateActions() {
       if (!transcript.value.trim()) {
-        showToast('无转写文本')
+        showToast('无转写文本,请先开始会议并发言')
         return
       }
       extracting.value = true
+      pollCount.value = 0
       actions.value = null
       const date = meetingDate.value || new Date().toISOString().slice(0, 10)
       meetingDate.value = date
@@ -97,11 +101,12 @@ createApp({
           method: 'POST',
           body: JSON.stringify({ date, content: transcript.value }),
         })
-        // 轮询直到 actions 就绪
+        // 轮询直到 actions 就绪 (或检测到 error/no_api_key 状态)
         let attempts = 0
         let result = null
         while (attempts < 30) {
           await new Promise(r => setTimeout(r, 2000))
+          pollCount.value = attempts + 1
           result = await api(`/api/meeting/${date}`)
           if (result.actions) break
           attempts++
@@ -110,7 +115,14 @@ createApp({
           // 标记 promoted 状态
           result.actions.actions = (result.actions.actions || []).map(a => ({ ...a, promoted: false }))
           actions.value = result.actions
-          showToast(`抽取完成: ${result.actions.actions.length} 行动项`)
+          const cnt = result.actions.actions?.length || 0
+          if (result.actions.status === 'error') {
+            showToast('AI 抽取失败: ' + (result.actions.error || '未知错误'))
+          } else if (result.actions.status === 'no_api_key') {
+            showToast('未配置 DeepSeek API Key')
+          } else {
+            showToast('抽取完成: ' + cnt + ' 行动项')
+          }
         } else {
           showToast('AI 抽取超时,请检查 .env API Key')
         }
@@ -136,7 +148,7 @@ createApp({
 
     return {
       sttStatus, sttAvailable, recording, transcript, interim,
-      extracting, actions, meetingDate, statusText,
+      extracting, actions, meetingDate, statusText, pollCount,
       startMeeting, stopMeeting, generateActions, promoteToKanban, logout,
     }
   },
