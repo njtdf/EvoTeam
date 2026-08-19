@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AutoProf - 实时会议</title>
-<link rel="stylesheet" href="/css/app.css">
+<link rel="stylesheet" href="/css/app.css?v=052">
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -57,10 +57,10 @@
       <span class="live-status" v-if="meetingDate">{{ meetingDate }}</span>
     </div>
 
-    <!-- 实时转写 -->
-    <div class="live-transcript">
-      <div v-if="!transcript && !interim && !recording" class="empty-state" style="padding:40px">
-        点击「开始会议」启动实时语音转写。<br>
+   <!-- 实时转写 -->
+   <div class="live-transcript">
+      <div v-if="!transcript && !interim && !recording && !manualText" class="empty-state" style="padding:40px">
+       点击「开始会议」启动实时语音转写。<br>
        <span style="font-size:12px;color:var(--text-muted)">需要 Chrome/Edge 浏览器并允许麦克风访问</span>
        <br><span style="font-size:12px;color:var(--text-muted)">也可在下方手动输入会议纪要</span>
      </div>
@@ -71,11 +71,14 @@
       <span class="live-interim">{{ interim }}</span>
    </div>
 
-    <!-- 手动输入兜底 -->
-    <div class="card" style="margin-top:8px;padding:10px 14px" v-if="!recording">
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">手动输入会议纪要（STT 不可用时）</div>
-      <textarea v-model="manualText" class="form-input" rows="4" placeholder="或在此粘贴会议纪要文本..." @input="syncManualText"></textarea>
-    </div>
+   <!-- 手动输入兜底 -->
+    <div class="card" style="margin-top:8px;padding:10px 14px">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">
+        手动输入会议纪要（STT 不可用或需要补充时）
+        <span v-if="!sttAvailable" style="color:#e74c3c;font-weight:600"> — STT 降级模式，请直接在此输入</span>
+      </div>
+      <textarea v-model="manualText" class="form-input" rows="5" placeholder="在此粘贴或输入会议纪要文本，然后点击上方「AI 总结+抽取行动」按钮..."></textarea>
+   </div>
 
     <!-- 轮询进度 -->
     <div v-if="extracting" class="card" style="margin-top:12px;padding:10px 14px">
@@ -122,7 +125,7 @@
     </div>
   </div>
 </div>
-<script src="/js/api.js"></script>
-<script src="/js/meeting-live.js"></script>
+<script src="/js/api.js?v=052"></script>
+<script src="/js/meeting-live.js?v=052"></script>
 </body>
 </html>

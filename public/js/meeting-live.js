@@ -86,20 +86,15 @@ createApp({
       showToast('录音已结束,可点击 AI 抽取行动')
     }
 
-    // Sync manual text into transcript when user types in fallback textarea
-    function syncManualText() {
-      if (manualText.value.trim() && !transcript.value) {
-        transcript.value = manualText.value
-      }
-    }
-
-    async function generateActions() {
+   async function generateActions() {
       // Use transcript from STT, or fall back to manual text input
-      if (!transcript.value.trim() && manualText.value.trim()) {
-        transcript.value = manualText.value
+      // Merge STT transcript + manual text (manual text supplements STT)
+      let content = transcript.value.trim()
+      if (manualText.value.trim()) {
+        content += (content ? '\n\n' : '') + manualText.value.trim()
       }
-      if (!transcript.value.trim()) {
-        showToast('无转写文本,请先开始会议并发言,或在下方手动输入')
+      if (!content) {
+        showToast('无文本内容。请在下方手动输入会议纪要，再点击此按钮')
         return
       }
       extracting.value = true
@@ -111,7 +106,7 @@ createApp({
         // 复用 Feature 2 文本管线: 上传纪要 → 异步 AI 抽取
         await api('/api/meeting/upload', {
           method: 'POST',
-          body: JSON.stringify({ date, content: transcript.value }),
+          body: JSON.stringify({ date, content }),
         })
         // 轮询直到 actions 就绪 (或检测到 error/no_api_key 状态)
         let attempts = 0
@@ -161,7 +156,7 @@ createApp({
     return {
       sttStatus, sttAvailable, recording, transcript, interim,
       extracting, actions, meetingDate, statusText, pollCount, manualText,
-      startMeeting, stopMeeting, generateActions, promoteToKanban, syncManualText, logout,
+      startMeeting, stopMeeting, generateActions, promoteToKanban, logout,
     }
   },
 }).mount('#app')

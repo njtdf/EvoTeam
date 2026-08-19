@@ -1,5 +1,25 @@
 // api.js - Shared API client for AutoProf frontend
 
+// Version auto-reload: detects stale cached JS and forces reload
+const APP_VERSION = '0.5.2'
+
+async function checkVersion() {
+  try {
+    const resp = await fetch('/api/version', { credentials: 'same-origin' })
+    const data = await resp.json()
+    if (data.version && data.version !== APP_VERSION) {
+      console.warn(`Version mismatch: server=${data.version} client=${APP_VERSION}, reloading...`)
+      // Force reload bypassing cache
+      window.location.reload()
+    }
+  } catch (e) {
+    // Non-critical, don't block the page
+  }
+}
+
+// Run version check on load
+checkVersion()
+
 async function api(path, options = {}) {
   const resp = await fetch(path, {
     ...options,
@@ -77,3 +97,6 @@ async function logout() {
   await api('/api/logout', { method: 'POST' })
   window.location.href = '/login'
 }
+
+// Export for other modules
+window.APP_VERSION = APP_VERSION

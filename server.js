@@ -56,7 +56,18 @@ const app = express()
 const PORT = process.env.PORT || 3000
 
 app.use(express.json({ limit: '2mb' }))
-app.use(express.static(join(__dirname, 'public')))
+app.use(express.static(join(__dirname, 'public'), {
+  setHeaders: (res, filepath) => {
+    // Force browser to always revalidate static assets (prevents stale JS/CSS cache)
+    res.setHeader('Cache-Control', 'no-cache, must-revalidate')
+  }
+}))
+
+// Prevent browser from caching HTML pages served via res.sendFile
+app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-cache, must-revalidate')
+  next()
+})
 
 // --- Config ---
 function loadConfig() {

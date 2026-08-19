@@ -1,4 +1,4 @@
-const { createApp, ref, computed, onMounted } = Vue
+const { createApp, ref, computed, onMounted, watch } = Vue
 
 createApp({
   setup() {
@@ -191,6 +191,23 @@ status: "on_track"
     loadMyActions()
     loadMyVc()
   })
+
+    // Sync URL hash when tab changes (so refresh/bookmark keeps current tab)
+    watch(activeTab, (newTab) => {
+      if (window.location.hash !== '#' + newTab) {
+        history.replaceState(null, '', '#' + newTab)
+      }
+    })
+
+    // Restore tab from URL hash on initial load
+    const hash = window.location.hash.slice(1)
+    const validTabs = ['report', 'kanban', 'skills', 'interview']
+    if (hash && validTabs.includes(hash)) {
+      activeTab.value = hash
+      if (hash === 'kanban') switchToKanban()
+      else if (hash === 'skills') switchToSkills()
+      else if (hash === 'interview') switchToInterview()
+    }
 
     // --- 价值链首次填写 (Wave 5) ---
     const myVc = ref(null)
