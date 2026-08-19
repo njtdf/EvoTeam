@@ -283,7 +283,7 @@ createApp({
       briefGenerating.value = true
       try {
         const data = await api('/api/brief')
-        const content = typeof data.brief === 'string' ? data.brief : JSON.stringify(data.brief, null, 2)
+        const content = data.markdown || JSON.stringify(data.brief, null, 2)
         const blob = new Blob([content], { type: 'text/markdown' })
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
@@ -301,7 +301,7 @@ createApp({
      user.value = u
      await loadStudents()
      const hash = window.location.hash.slice(1)
-     const validTabs = ['dashboard','cockpit','meeting','kanban','skills','submissions','seating','lesson','workload','invoice','interview','valuecycle']
+     const validTabs = ['dashboard','cockpit','meeting','kanban','skills','submissions','seating','lesson','workload','invoice','interview','valuecycle','agents','calendar']
      if (hash && validTabs.includes(hash)) {
        if (hash === 'dashboard') await switchToDashboard()
        else if (hash === 'cockpit') switchToCockpit()
@@ -314,6 +314,8 @@ createApp({
        else if (hash === 'workload') await switchToWorkload()
        else if (hash === 'invoice') await switchToInvoice()
        else if (hash === 'interview') await switchToInterview()
+        else if (hash === 'agents') switchToAgents()
+        else if (hash === 'calendar') await switchToCalendar()
        else if (hash === 'valuecycle') await switchToValueCycle()
      } else {
        await switchToDashboard()
@@ -676,6 +678,87 @@ createApp({
       vcSaving.value = false
     }
 
+
+    // --- Agent 面板 ---
+    const agents = ref([
+      { icon: '📝', name: 'AI Summary Agent', role: '周报分析', description: '解析学生双周报，生成总结/风险/建议', capabilities: ['NLP', 'Risk Detection'], status: 'active' },
+      { icon: '🗓️', name: 'Meeting Extractor', role: '会议纪要', description: '从会议纪要抽取决议和行动项，匹配学生', capabilities: ['NLP', 'Name Matching'], status: 'active' },
+      { icon: '🎤', name: 'STT Agent', role: '语音转写', description: '实时会议语音转文字 (FunASR/SenseVoice)', capabilities: ['ASR', 'VAD'], status: 'planned' },
+      { icon: '🧰', name: 'Skill Runner', role: '科研工具', description: '运行 idea-evaluator, paper-polish 等技能', capabilities: ['SSE Streaming'], status: 'active' },
+      { icon: '📈', name: 'Progress Tracker', role: '进度追踪', description: '读取 Codex 历史，辅助生成周报草稿', capabilities: ['CLI Bridge'], status: 'active' },
+      { icon: '🔍', name: 'Review Agent', role: '审稿辅助', description: '论文投稿前审查 (5维度)', capabilities: ['SSE Streaming'], status: 'active' },
+      { icon: '🎯', name: 'Interview Agent', role: '面试/答辩', description: '模拟答辩场景，推荐回答策略', capabilities: ['SSE Streaming'], status: 'active' },
+      { icon: '🔗', name: 'Value Chain Agent', role: '价值链对齐', description: '课题组与学生价值链对齐分析', capabilities: ['Assessment'], status: 'active' },
+      { icon: '📰', name: 'RSS Monitor', role: '每日新闻', description: 'arXiv/IEEE 文献动态推送', capabilities: ['RSS Parser'], status: 'active' },
+      { icon: '📧', name: 'Email Agent', role: '邮箱→看板', description: 'IMAP 读取邮件抽取待办', capabilities: ['IMAP'], status: 'planned' },
+    ])
+
+    function switchToAgents() {
+      activeTab.value = 'agents'
+      window.location.hash = 'agents'
+    }
+
+    // --- 日历 ---
+    const calendarMonth = ref(new Date().toISOString().slice(0, 7))
+    const calendarWeekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+    const calendarEvents = ref([])
+
+    const calendarLabel = computed(() => {
+      const [y, m] = calendarMonth.value.split('-')
+      return y + '年' + parseInt(m) + '月'
+    })
+
+    const calendarDays = computed(() => {
+      const [y, m] = calendarMonth.value.split('-').map(Number)
+      const firstDay = new Date(y, m - 1, 1)
+      const lastDay = new Date(y, m, 0)
+      // Monday = 0
+      let startWeekday = firstDay.getDay() - 1
+      if (startWeekday < 0) startWeekday = 6
+      const days = []
+      // Previous month padding
+      const prevLast = new Date(y, m - 1, 0).getDate()
+      for (let i = startWeekday - 1; i >= 0; i--) {
+        days.push({ num: prevLast - i, inMonth: false, isToday: false, events: [] })
+      }
+      // Current month
+      const today = new Date()
+      const todayStr = today.toISOString().slice(0, 10)
+      for (let d = 1; d <= lastDay.getDate(); d++) {
+        const dateStr = y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0')
+        const evs = calendarEvents.value.filter(e => e.date === dateStr)
+        days.push({ num: d, inMonth: true, isToday: dateStr === todayStr, events: evs })
+      }
+      // Next month padding to fill 6 rows
+      const remaining = 42 - days.length
+      for (let d = 1; d <= remaining; d++) {
+        days.push({ num: d, inMonth: false, isToday: false, events: [] })
+      }
+      return days
+    })
+
+    async function switchToCalendar() {
+      activeTab.value = 'calendar'
+      window.location.hash = 'calendar'
+      try {
+        const r = await fetch('/api/calendar/events')
+        if (r.ok) calendarEvents.value = await r.json()
+      } catch (e) { console.error('loadCalendar:', e.message) }
+    }
+
+    function prevMonth() {
+      const [y, m] = calendarMonth.value.split('-').map(Number)
+      const d = new Date(y, m - 2, 1)
+      calendarMonth.value = d.toISOString().slice(0, 7)
+    }
+
+    function nextMonth() {
+      const [y, m] = calendarMonth.value.split('-').map(Number)
+      const d = new Date(y, m, 1)
+      calendarMonth.value = d.toISOString().slice(0, 7)
+    }
+
+
     return {
       user, students, selectedStudentId, report, summary, chatMessages,
       // 价值链
@@ -720,6 +803,10 @@ createApp({
       interviewScenario, interviewTopic, interviewContext,
       interviewHistory, interviewAnswer, interviewStreaming, interviewStreamText,
       switchToInterview, startInterview, sendInterviewAnswer, sendInterviewCoach,
+      // Agent + Calendar
+      agents, switchToAgents,
+      calendarMonth, calendarWeekdays, calendarEvents, calendarDays, calendarLabel,
+      switchToCalendar, prevMonth, nextMonth,
     }
   },
 }).mount('#app')

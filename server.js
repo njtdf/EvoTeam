@@ -10,7 +10,7 @@ import { fileURLToPath } from 'url'
 import { load as parseYaml } from 'js-yaml'
 import { parseReport, scanReportFiles } from './packages/lab-brief/lib/parser.js'
 import { evaluateRisks } from './packages/lab-brief/lib/risk.js'
-import { generateBrief } from './packages/lab-brief/lib/brief.js'
+import { generateBrief, renderBriefMarkdown } from './packages/lab-brief/lib/brief.js'
 import {
   authenticate, createSession, getSession, destroySession,
   requireAuth, requireRole, setSessionCookie, clearSessionCookie, loadUsers,
@@ -40,6 +40,7 @@ import { loadMemory, updateMemory, accumulateFromReport, accumulateFromChat, acc
 import { createRoom, listRooms, getRoom, addMessage, joinRoom, leaveRoom, deleteRoom, shouldTriggerAI, buildAIContext, addClient, broadcast } from './lib/chatroom.js'
 import { buildStudentContext } from './lib/ai-context.js'
 import { loadValueCycle, updateValueCycle, loadGroupValueCycle, saveGroupValueCycle, getAllAlignments } from './lib/valuecycle.js'
+import { loadCalendarEvents } from './lib/calendar.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -326,7 +327,8 @@ app.get('/api/brief', requireRole('teacher'), (req, res) => {
   }
   const risks = evaluateRisks(reports, students, period.start, period.end)
  const brief = generateBrief(reports, risks, students, period.start, period.end)
-res.json({ brief, students })
+  const markdown = renderBriefMarkdown(brief)
+  res.json({ brief, markdown, students })
 })
 
 // --- API: Progress / Weekly Report Draft (Feature 5) ---
@@ -565,6 +567,16 @@ app.get('/api/news', requireAuth, async (req, res) => {
      }
    } catch (e) {
     res.json({ date, content: null, exists: false, error: e.message })
+  }
+})
+
+// --- API: Calendar Events (Feature: 日历) ---
+app.get('/api/calendar/events', requireAuth, (req, res) => {
+  try {
+    const events = loadCalendarEvents()
+    res.json(events)
+  } catch (e) {
+    res.json([])
   }
 })
 

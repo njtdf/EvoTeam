@@ -4,40 +4,45 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AutoProf - Teacher Dashboard</title>
-<link rel="stylesheet" href="/css/app.css?v=052">
+<link rel="stylesheet" href="/css/app.css?v=053">
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
 <div id="app">
-  <div class="app-header">
-    <span class="title">AutoProf Lab Cockpit</span>
-      <div class="tab-bar">
-      <button class="tab-btn" :class="{active: activeTab==='dashboard'}" @click="switchToDashboard">总览</button>
-      <button class="tab-btn" :class="{active: activeTab==='cockpit'}" @click="switchToCockpit">周报</button>
-      <button class="tab-btn" :class="{active: activeTab==='meeting'}" @click="switchToMeeting">会议</button>
-      <button class="tab-btn" :class="{active: activeTab==='kanban'}" @click="switchToKanban">看板</button>
-      <a class="tab-btn" href="/meeting-live" style="text-decoration:none">实时会议</a>
-      <button class="tab-btn" :class="{active: activeTab==='skills'}" @click="switchToSkills">工具箱</button>
-     <button class="tab-btn" :class="{active: activeTab==='submissions'}" @click="switchToSubmissions">投稿</button>
-      <button class="tab-btn" :class="{active: activeTab==='seating'}" @click="switchToSeating">排座</button>
-      <button class="tab-btn" :class="{active: activeTab==='lesson'}" @click="switchToLesson">备课</button>
-      <button class="tab-btn" :class="{active: activeTab==='workload'}" @click="switchToWorkload">工作量</button>
-<button class="tab-btn" :class="{active: activeTab==='invoice'}" @click="switchToInvoice">记账</button>
-<button class="tab-btn" :class="{active: activeTab==='interview'}" @click="switchToInterview">面试</button>
-<button class="tab-btn" :class="{active: activeTab==='valuecycle'}" @click="switchToValueCycle">价值链</button>
-</div>
-    <select v-if="activeTab==='cockpit'" class="student-select" v-model="selectedStudentId" @change="onStudentChange">
-      <option value="">Select Student</option>
-      <option v-for="s in students" :key="s.id" :value="s.id">
-        {{ s.id }} - {{ s.name }} {{ s.has_submitted ? '' : '(no report)' }}
-      </option>
-    </select>
-    <span class="spacer"></span>
-    <button class="header-btn" @click="logout">Logout</button>
-  </div>
-
-  <!-- 总览 Dashboard Tab -->
+  <div class="app-container">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-logo">AutoProf</span>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="sidebar-nav-section">核心</div>
+        <a class="sidebar-nav-item" :class="{active:activeTab==='dashboard'}" @click="switchToDashboard"><span class="nav-icon">📊</span> 总览</a>
+        <a class="sidebar-nav-item" :class="{active:activeTab==='cockpit'}" @click="switchToCockpit"><span class="nav-icon">📝</span> 周报</a>
+        <a class="sidebar-nav-item" :class="{active:activeTab==='meeting'}" @click="switchToMeeting"><span class="nav-icon">🗓️</span> 会议</a>
+        <a class="sidebar-nav-item" :class="{active:activeTab==='kanban'}" @click="switchToKanban"><span class="nav-icon">📋</span> 看板</a>
+        <a class="sidebar-nav-item" :class="{active:activeTab==='calendar'}" @click="switchToCalendar"><span class="nav-icon">📅</span> 日历</a>
+        <a class="sidebar-nav-item" href="/meeting-live"><span class="nav-icon">🎤</span> 实时会议</a>
+        <div class="sidebar-nav-section">Agent</div>
+        <a class="sidebar-nav-item" :class="{active:activeTab==='agents'}" @click="switchToAgents"><span class="nav-icon">🤖</span> Agent 面板</a>
+        <div class="sidebar-nav-section">科研工具</div>
+        <a class="sidebar-nav-item" :class="{active:activeTab==='skills'}" @click="switchToSkills"><span class="nav-icon">🧰</span> 工具箱</a>
+        <a class="sidebar-nav-item" :class="{active:activeTab==='submissions'}" @click="switchToSubmissions"><span class="nav-icon">📄</span> 投稿</a>
+        <a class="sidebar-nav-item" :class="{active:activeTab==='valuecycle'}" @click="switchToValueCycle"><span class="nav-icon">🔗</span> 价值链</a>
+        <div class="sidebar-nav-section">教学管理</div>
+        <a class="sidebar-nav-item" :class="{active:activeTab==='seating'}" @click="switchToSeating"><span class="nav-icon">🪑</span> 排座</a>
+        <a class="sidebar-nav-item" :class="{active:activeTab==='lesson'}" @click="switchToLesson"><span class="nav-icon">📚</span> 备课</a>
+        <a class="sidebar-nav-item" :class="{active:activeTab==='workload'}" @click="switchToWorkload"><span class="nav-icon">⚖️</span> 工作量</a>
+        <a class="sidebar-nav-item" :class="{active:activeTab==='invoice'}" @click="switchToInvoice"><span class="nav-icon">💰</span> 记账</a>
+        <a class="sidebar-nav-item" :class="{active:activeTab==='interview'}" @click="switchToInterview"><span class="nav-icon">🎯</span> 面试</a>
+      </nav>
+      <div class="sidebar-footer">
+        <span class="user-info" v-if="user">{{ user.name }}</span>
+        <button class="header-btn" @click="logout">退出</button>
+      </div>
+    </aside>
+    <main class="main-content">
+  <!-- 总览 Dashboard Tab -->  <!-- 总览 Dashboard Tab -->
   <div v-if="activeTab==='dashboard'" class="dashboard-view">
     <div class="stat-bar" v-if="dashboardData">
       <span class="stat-pill">👥 {{ dashboardData.stats.total }} 学生</span>
@@ -83,6 +88,14 @@
 
   <!-- 周报 Cockpit Tab -->
   <div v-if="activeTab==='cockpit'">
+    <div class="cockpit-toolbar">
+      <select class="student-select" v-model="selectedStudentId" @change="onStudentChange">
+        <option value="">选择学生</option>
+        <option v-for="s in students" :key="s.id" :value="s.id">
+          {{ s.id }} - {{ s.name }} {{ s.has_submitted ? '' : '(未交)' }}
+        </option>
+      </select>
+    </div>
     <div v-if="!selectedStudentId" class="empty-state">
       Select a student to view their report and chat with AI
     </div>
@@ -650,9 +663,49 @@
       </div>
     </div>
   </div>
+
+  <!-- Agent 面板 -->
+  <div v-if="activeTab==='agents'" class="agent-view">
+    <div class="card-title" style="margin-bottom:12px">LabOS Agent 总览</div>
+    <div class="agent-grid">
+      <div class="agent-card" v-for="a in agents" :key="a.name">
+        <div class="agent-card-header">
+          <span class="agent-icon">{{ a.icon }}</span>
+          <span class="agent-name">{{ a.name }}</span>
+          <span class="agent-status" :class="'status-' + a.status">{{ a.status === 'active' ? '✅ 运行中' : '⏳ 计划中' }}</span>
+        </div>
+        <div class="agent-role">{{ a.role }}</div>
+        <div class="agent-desc">{{ a.description }}</div>
+        <div class="agent-caps">
+          <span class="tag" v-for="c in a.capabilities" :key="c">{{ c }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 日历 -->
+  <div v-if="activeTab==='calendar'" class="calendar-view">
+    <div class="calendar-header">
+      <button class="btn btn-secondary btn-sm" @click="prevMonth">←</button>
+      <span class="calendar-title">{{ calendarLabel }}</span>
+      <button class="btn btn-secondary btn-sm" @click="nextMonth">→</button>
+    </div>
+    <div class="calendar-grid">
+      <div class="calendar-weekday" v-for="d in calendarWeekdays" :key="d">{{ d }}</div>
+      <div class="calendar-day" v-for="(day, i) in calendarDays" :key="i" :class="{today: day.isToday, other: !day.inMonth}">
+        <div class="calendar-day-num">{{ day.num }}</div>
+        <div class="calendar-event" v-for="e in day.events" :key="e.id" :class="'event-' + e.type" :title="e.title">
+          {{ e.title }}
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
+    </main>
+  </div>
 </div>
-<script src="/js/api.js?v=052"></script>
-<script src="/js/teacher.js?v=052"></script>
+<script src="/js/api.js?v=053"></script>
+<script src="/js/teacher.js?v=053"></script>
 </body>
 </html>
