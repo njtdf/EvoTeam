@@ -405,6 +405,9 @@ body {
   display: flex;
   gap: 4px;
   margin-left: 20px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  max-width: calc(100vw - 200px);
 }
 .tab-btn {
   background: rgba(255,255,255,0.15);
@@ -415,6 +418,7 @@ body {
   font-size: 13px;
   cursor: pointer;
   transition: background 0.15s;
+  white-space: nowrap;
 }
 .tab-btn:hover { background: rgba(255,255,255,0.28); }
 .tab-btn.active { background: #fff; color: var(--primary); font-weight: 600; }
