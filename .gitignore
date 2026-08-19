@@ -68,3 +68,11 @@ labos/reports/s*/
 
 # Validation reports (contain student PII)
 labos/validation-report-*.md
+
+# Value cycle data (student career goals + advisor assessments - PII)
+labos/valuecycles/
+
+# Temp test artifacts
+_cookie.txt
+_server.log
+*.log

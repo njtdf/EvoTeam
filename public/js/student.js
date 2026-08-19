@@ -178,12 +178,61 @@ status: "on_track"
      const u = await getMe()
      if (!u) { window.location.href = '/login'; return }
      if (u.role === 'teacher') { window.location.href = '/teacher'; return }
-     user.value = u
-     loadTemplate()
-     loadMyActions()
-   })
+    user.value = u
+    loadTemplate()
+    loadMyActions()
+    loadMyVc()
+  })
 
-     // ===== AI 工具箱 (Feature 6/16) =====
+    // --- 价值链首次填写 (Wave 5) ---
+    const myVc = ref(null)
+    const showVcModal = ref(false)
+    const vcForm = ref({ primary: '', secondary: [], career_note: '' })
+    const vcGoals = [
+      { value: 'graduation', label: '顺利毕业' },
+      { value: 'state_grid', label: '国网/电力企业' },
+      { value: 'academia', label: '学术深造/读博' },
+      { value: 'enterprise', label: '互联网/科技企业' },
+      { value: 'startup', label: '创业' },
+    ]
+    const vcSecondaryOpts = [
+      { value: 'paper', label: '发论文' },
+      { value: 'patent', label: '申请专利' },
+      { value: 'skill', label: '提升编程/工程能力' },
+      { value: 'network', label: '扩展人脉' },
+      { value: 'industry', label: '工业落地经验' },
+    ]
+
+    async function loadMyVc() {
+      try {
+        const r = await fetch(`/api/valuecycle/${user.value.id}`)
+        if (r.ok) {
+          myVc.value = await r.json()
+          if (!myVc.value.filled) {
+            showVcModal.value = true
+          }
+        }
+      } catch (e) { console.error('loadMyVc:', e.message) }
+    }
+
+    async function submitVcForm() {
+      const id = user.value.id
+      const r = await fetch(`/api/valuecycle/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          personal_goals: vcForm.value,
+          filled: true,
+        }),
+      })
+      if (r.ok) {
+        const data = await r.json()
+        myVc.value = data.valuecycle
+        showVcModal.value = false
+      }
+    }
+
+    // ===== AI 工具箱 (Feature 6/16) =====
      const skillManifest = ref([])
      const selectedSkill = ref(null)
      const skillInput = ref('')
@@ -334,6 +383,9 @@ status: "on_track"
       skillManifest, selectedSkill, skillInput, skillOutput, skillStreaming,
       skillPlaceholder, skillOutputHtml, switchToSkills, selectSkill, runSkillAI,
       showPolishSuggestion, goToSkill,
+      // 价值链
+      myVc, showVcModal, vcForm, vcGoals, vcSecondaryOpts,
+      loadMyVc, submitVcForm,
       // 面试练习
       interviewScenario, interviewTopic, interviewContext,
       interviewHistory, interviewAnswer, interviewStreaming, interviewStreamText,

@@ -183,6 +183,37 @@
     </div>
   </div>
 </div>
+<!-- 价值链首次填写弹窗 (Wave 5) -->
+<div v-if="showVcModal" class="vc-modal-overlay" @click.self="showVcModal=false">
+  <div class="vc-modal">
+    <div class="vc-modal-title">欢迎来到 AutoProf！请填写你的个人价值链</div>
+    <p class="vc-modal-desc">这将帮助 AI 助手更好地理解你的目标，为你提供个性化的科研指导。</p>
+    <div class="form-row">
+      <label>你的主要目标（毕业后打算）:</label>
+      <select v-model="vcForm.primary" class="form-input">
+        <option value="">请选择...</option>
+        <option v-for="g in vcGoals" :key="g.value" :value="g.value">{{ g.label }}</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>次要目标（可多选）:</label>
+      <div class="vc-checkboxes">
+        <label v-for="o in vcSecondaryOpts" :key="o.value" class="vc-checkbox">
+          <input type="checkbox" :value="o.value" v-model="vcForm.secondary" />
+          {{ o.label }}
+        </label>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>补充说明（可选）:</label>
+      <textarea v-model="vcForm.career_note" class="form-input" rows="2" placeholder="如：想回老家电网、对某方向特别感兴趣..."></textarea>
+    </div>
+    <div style="display:flex; gap:8px; justify-content:flex-end">
+      <button class="btn btn-secondary" @click="showVcModal=false">稍后填写</button>
+      <button class="btn btn-primary" @click="submitVcForm" :disabled="!vcForm.primary">提交</button>
+    </div>
+  </div>
+</div>
 <script src="/js/api.js"></script>
 <script src="/js/student.js"></script>
 </body>

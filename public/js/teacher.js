@@ -586,10 +586,68 @@ createApp({
         interviewStreamText.value = ''
         interviewStreaming.value = false
       })
+   }
+
+    // --- 价值链 Tab 状态 (Wave 5) ---
+    const groupVc = ref(null)
+    const alignments = ref([])
+    const selectedVcStudent = ref(null)
+    const vcSaving = ref(false)
+
+    async function switchToValueCycle() {
+      activeTab.value = 'valuecycle'
+      await Promise.all([loadGroupVc(), loadAlignments()])
+    }
+
+    async function loadGroupVc() {
+      try {
+        const r = await fetch('/api/valuecycle/group')
+        if (r.ok) groupVc.value = await r.json()
+      } catch (e) { console.error('loadGroupVc:', e.message) }
+    }
+
+    async function loadAlignments() {
+      try {
+        const r = await fetch('/api/valuecycle/alignment/all')
+        if (r.ok) {
+          const data = await r.json()
+          alignments.value = Array.isArray(data) ? data : []
+        }
+      } catch (e) { console.error('loadAlignments:', e.message) }
+    }
+
+    async function selectVcStudent(id) {
+      try {
+        const r = await fetch(`/api/valuecycle/${id}`)
+        if (r.ok) selectedVcStudent.value = await r.json()
+      } catch (e) { console.error('selectVcStudent:', e.message) }
+    }
+
+    async function saveVcAssessment() {
+      if (!selectedVcStudent.value) return
+      vcSaving.value = true
+      try {
+        const id = selectedVcStudent.value.student_id
+        const assessment = selectedVcStudent.value.advisor_assessment
+        const r = await fetch(`/api/valuecycle/${id}/assessment`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(assessment),
+        })
+        if (r.ok) {
+          const data = await r.json()
+          selectedVcStudent.value = data.valuecycle
+          await loadAlignments()
+        }
+      } catch (e) { console.error('saveVcAssessment:', e.message) }
+      vcSaving.value = false
     }
 
     return {
       user, students, selectedStudentId, report, summary, chatMessages,
+      // 价值链
+      groupVc, alignments, selectedVcStudent, vcSaving,
+      switchToValueCycle, loadGroupVc, loadAlignments, selectVcStudent, saveVcAssessment,
       chatInput, chatStreaming, loadingReport, reportHtml, chatMessagesEl,
       onStudentChange, sendChat, logout,
       // 总览

@@ -683,3 +683,42 @@ body {
 .interview-chat .chat-bubble {
   margin-bottom: 12px;
 }
+
+/* --- 价值链 Tab (Wave 5) --- */
+.valuecycle-view { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.vc-group-section { margin-bottom: 8px; }
+.vc-label { font-weight: 600; margin-bottom: 4px; color: #333; }
+.vc-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-green { background: #e8f5e9; color: #2e7d32; }
+.tag-blue { background: #e3f2fd; color: #1565c0; }
+
+.alignment-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.alignment-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; cursor: pointer; transition: box-shadow .15s; }
+.alignment-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+.vc-unfilled { opacity: .6; border-style: dashed; }
+.vc-selected { border-color: #07C160; box-shadow: 0 0 0 2px rgba(7,193,96,.2); }
+.vc-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.vc-name { font-weight: 600; font-size: 14px; }
+.vc-id { color: #999; font-size: 12px; }
+.vc-card-body { font-size: 13px; line-height: 1.6; }
+.vc-card-row { display: flex; gap: 4px; }
+.vc-label-sm { color: #888; min-width: 42px; }
+.vc-muted { color: #999; font-style: italic; }
+.vc-score-low { color: #e53935; font-weight: 600; }
+.vc-score-mid { color: #f9a825; font-weight: 600; }
+.vc-score-high { color: #43a047; font-weight: 600; }
+
+.vc-detail { display: flex; flex-direction: column; gap: 16px; }
+.vc-detail-section { padding: 12px; background: #f9f9f9; border-radius: 6px; }
+.vc-misalign { color: #e53935; font-weight: 600; }
+.vc-slider { width: 200px; }
+@media (max-width: 900px) { .alignment-grid { grid-template-columns: repeat(2, 1fr); } }
+
+/* --- 价值链弹窗 (学生端 Wave 5) --- */
+.vc-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.vc-modal { background: #fff; border-radius: 12px; padding: 24px; max-width: 500px; width: 90%; max-height: 85vh; overflow-y: auto; }
+.vc-modal-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; color: #07C160; }
+.vc-modal-desc { color: #888; font-size: 13px; margin-bottom: 16px; }
+.vc-checkboxes { display: flex; flex-wrap: wrap; gap: 12px; }
+.vc-checkbox { display: flex; align-items: center; gap: 4px; font-size: 14px; cursor: pointer; }
+.vc-checkbox input { width: 16px; height: 16px; }

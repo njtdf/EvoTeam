@@ -38,6 +38,8 @@ import { calculateWorkload, loadWorkload, loadCoefficients, saveCoefficients, li
 import { loadInvoices, addInvoice, updateInvoice, deleteInvoice, getInvoiceStats } from './lib/invoice.js'
 import { loadMemory, updateMemory, accumulateFromReport, accumulateFromChat, accumulateFromSkill, accumulateFromTask, getContextString, injectContext } from './lib/memory.js'
 import { createRoom, listRooms, getRoom, addMessage, joinRoom, leaveRoom, deleteRoom, shouldTriggerAI, buildAIContext, addClient, broadcast } from './lib/chatroom.js'
+import { buildStudentContext } from './lib/ai-context.js'
+import { loadValueCycle, updateValueCycle, loadGroupValueCycle, saveGroupValueCycle, getAllAlignments } from './lib/valuecycle.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -260,7 +262,13 @@ app.post('/api/chat/:id', requireRole('teacher'), (req, res) => {
   saveMessage(studentId, 'user', message)
 
   // Build AI context + inject student memory
-  const aiMessages = injectContext(buildChatMessages(report, summary, chatHistory, message), studentId)
+  let vcContext = ''
+  try {
+    vcContext = buildStudentContext(studentId)
+  } catch (e) {
+    console.error('[chat] buildStudentContext error:', e.message)
+  }
+  const aiMessages = injectContext(buildChatMessages(report, summary, chatHistory, message, vcContext), studentId)
 
   // SSE headers
   res.setHeader('Content-Type', 'text/event-stream; charset=utf-8')
@@ -819,6 +827,66 @@ app.post('/api/interview', requireAuth, async (req, res) => {
     console.error('[interview] error:', e.message)
     res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`)
     res.end()
+  }
+})
+
+// --- API: ValueCycle (Wave 5 — AI through-line) ---
+app.get('/api/valuecycle/group', requireAuth, (req, res) => {
+  try {
+    res.json(loadGroupValueCycle())
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.put('/api/valuecycle/group', requireRole('teacher'), (req, res) => {
+  try {
+    saveGroupValueCycle(req.body)
+    res.json({ ok: true })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.get('/api/valuecycle/alignment/all', requireRole('teacher'), (req, res) => {
+  try {
+    res.json(getAllAlignments())
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.get('/api/valuecycle/:id', requireAuth, (req, res) => {
+  try {
+    res.json(loadValueCycle(req.params.id))
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.put('/api/valuecycle/:id', requireAuth, (req, res) => {
+  try {
+    // Students can only edit their own; teachers can edit any
+    const vc = loadValueCycle(req.params.id)
+    if (req.user.role !== 'teacher' && vc.student_id !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot edit another student valuecycle' })
+    }
+    updateValueCycle(req.params.id, req.body)
+    res.json({ ok: true, valuecycle: loadValueCycle(req.params.id) })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.put('/api/valuecycle/:id/assessment', requireRole('teacher'), (req, res) => {
+  try {
+    const vc = loadValueCycle(req.params.id)
+    updateValueCycle(req.params.id, {
+      advisor_assessment: { ...vc.advisor_assessment, ...req.body }
+    })
+    res.json({ ok: true, valuecycle: loadValueCycle(req.params.id) })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
   }
 })
 

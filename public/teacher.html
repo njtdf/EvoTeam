@@ -25,6 +25,7 @@
       <button class="tab-btn" :class="{active: activeTab==='workload'}" @click="switchToWorkload">工作量</button>
 <button class="tab-btn" :class="{active: activeTab==='invoice'}" @click="switchToInvoice">记账</button>
 <button class="tab-btn" :class="{active: activeTab==='interview'}" @click="switchToInterview">面试</button>
+<button class="tab-btn" :class="{active: activeTab==='valuecycle'}" @click="switchToValueCycle">价值链</button>
 </div>
     <select v-if="activeTab==='cockpit'" class="student-select" v-model="selectedStudentId" @change="onStudentChange">
       <option value="">Select Student</option>
@@ -551,6 +552,103 @@
     <div style="display:flex; gap:8px">
       <button class="btn btn-primary" @click="sendInterviewAnswer" :disabled="!interviewAnswer.trim()">发送回答</button>
       <button class="btn btn-secondary" @click="sendInterviewCoach">推荐回答策略</button>
+    </div>
+  </div>
+</div>
+<!-- 价值链 Tab (Wave 5) -->
+<div v-if="activeTab==='valuecycle'" class="valuecycle-view">
+  <div class="card" v-if="groupVc">
+    <div class="card-title">课题组价值链</div>
+    <div class="vc-group-section">
+      <div class="vc-label">研究方向:</div>
+      <div class="vc-tags">
+        <span v-for="d in groupVc.research_directions" :key="d" class="tag tag-green">{{ d }}</span>
+      </div>
+    </div>
+    <div class="vc-group-section">
+      <div class="vc-label">产出管线:</div>
+      <div class="vc-tags">
+        <span v-for="o in groupVc.outputs" :key="o" class="tag tag-blue">{{ o }}</span>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">学生价值对齐 ({{ alignments.length }} 人)</div>
+    <div class="alignment-grid">
+      <div v-for="a in alignments" :key="a.student_id" class="alignment-card"
+           :class="{ 'vc-unfilled': !a.filled, 'vc-selected': selectedVcStudent && selectedVcStudent.student_id === a.student_id }"
+           @click="selectVcStudent(a.student_id)">
+        <div class="vc-card-header">
+          <span class="vc-name">{{ a.student_name }}</span>
+          <span class="vc-id">{{ a.student_id }}</span>
+        </div>
+        <div class="vc-card-body">
+          <div v-if="a.filled" class="vc-card-row">
+            <span class="vc-label-sm">目标:</span>
+            <span>{{ a.primary_goal || '—' }}</span>
+          </div>
+          <div v-else class="vc-card-row vc-muted">未填写</div>
+          <div class="vc-card-row">
+            <span class="vc-label-sm">阶段:</span>
+            <span>{{ a.research_stage || '—' }}</span>
+          </div>
+          <div class="vc-card-row">
+            <span class="vc-label-sm">评分:</span>
+            <span :class="{'vc-score-low': a.value_score < 40, 'vc-score-mid': a.value_score >= 40 && a.value_score < 70, 'vc-score-high': a.value_score >= 70}">{{ a.value_score || 0 }}/100</span>
+          </div>
+          <div class="vc-card-row">
+            <span class="vc-label-sm">就绪:</span>
+            <span>{{ a.readiness || 'not_ready' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card" v-if="selectedVcStudent">
+    <div class="card-title">{{ selectedVcStudent.student_name }} — 价值链详情</div>
+    <div class="vc-detail">
+      <div class="vc-detail-section">
+        <div class="vc-label">个人目标</div>
+        <div v-if="selectedVcStudent.filled">
+          <p>主要: {{ selectedVcStudent.personal_goals?.primary || '—' }}</p>
+          <p v-if="selectedVcStudent.personal_goals?.career_note">备注: {{ selectedVcStudent.personal_goals.career_note }}</p>
+        </div>
+        <p v-else class="vc-muted">学生尚未填写个人目标</p>
+      </div>
+      <div class="vc-detail-section">
+        <div class="vc-label">研究课题</div>
+        <p>{{ selectedVcStudent.research?.project || '—' }} ({{ selectedVcStudent.research?.stage || '未知阶段' }})</p>
+      </div>
+      <div class="vc-detail-section">
+        <div class="vc-label">价值对齐</div>
+        <div v-if="selectedVcStudent.alignment?.misalignments?.length">
+          <p class="vc-misalign">⚠ 不对齐项:</p>
+          <ul>
+            <li v-for="m in selectedVcStudent.alignment.misalignments" :key="m">{{ m }}</li>
+          </ul>
+        </div>
+        <p v-else>无明显不对齐</p>
+      </div>
+      <div class="vc-detail-section">
+        <div class="vc-label">导师评估</div>
+        <div class="form-row">
+          <label>价值评分 (0-100):</label>
+          <input type="range" min="0" max="100" v-model="selectedVcStudent.advisor_assessment.value_score" class="vc-slider" />
+          <span>{{ selectedVcStudent.advisor_assessment.value_score }}</span>
+        </div>
+        <div class="form-row">
+          <label>就绪度:</label>
+          <select v-model="selectedVcStudent.advisor_assessment.readiness" class="form-input" style="width:auto">
+            <option value="not_ready">未就绪</option>
+            <option value="approaching">接近就绪</option>
+            <option value="ready">就绪</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <textarea v-model="selectedVcStudent.advisor_assessment.notes" class="form-input" rows="2" placeholder="导师备注..."></textarea>
+        </div>
+        <button class="btn btn-primary" @click="saveVcAssessment" :disabled="vcSaving">{{ vcSaving ? '保存中...' : '保存评估' }}</button>
+      </div>
     </div>
   </div>
 </div>
