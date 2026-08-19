@@ -11,9 +11,10 @@ createApp({
     const interim = ref('')
     const extracting = ref(false)
     const actions = ref(null)
-    const meetingDate = ref('')
-    const pollCount = ref(0)
-    let recognition = null
+ const meetingDate = ref('')
+ const pollCount = ref(0)
+ const manualText = ref('')
+ let recognition = null
 
     const statusText = computed(() => {
       if (extracting.value) return 'AI 抽取中 (' + pollCount.value + '/30)'
@@ -85,9 +86,20 @@ createApp({
       showToast('录音已结束,可点击 AI 抽取行动')
     }
 
+    // Sync manual text into transcript when user types in fallback textarea
+    function syncManualText() {
+      if (manualText.value.trim() && !transcript.value) {
+        transcript.value = manualText.value
+      }
+    }
+
     async function generateActions() {
+      // Use transcript from STT, or fall back to manual text input
+      if (!transcript.value.trim() && manualText.value.trim()) {
+        transcript.value = manualText.value
+      }
       if (!transcript.value.trim()) {
-        showToast('无转写文本,请先开始会议并发言')
+        showToast('无转写文本,请先开始会议并发言,或在下方手动输入')
         return
       }
       extracting.value = true
@@ -148,8 +160,8 @@ createApp({
 
     return {
       sttStatus, sttAvailable, recording, transcript, interim,
-      extracting, actions, meetingDate, statusText, pollCount,
-      startMeeting, stopMeeting, generateActions, promoteToKanban, logout,
+      extracting, actions, meetingDate, statusText, pollCount, manualText,
+      startMeeting, stopMeeting, generateActions, promoteToKanban, syncManualText, logout,
     }
   },
 }).mount('#app')

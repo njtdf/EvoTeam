@@ -13,19 +13,19 @@
   <div class="app-header">
     <span class="title">AutoProf Lab Cockpit</span>
     <div class="tab-bar">
-      <a class="tab-btn" href="/teacher" style="text-decoration:none">总览</a>
-      <a class="tab-btn" href="/teacher" style="text-decoration:none">周报</a>
-      <a class="tab-btn" href="/teacher" style="text-decoration:none">会议</a>
-      <a class="tab-btn" href="/teacher" style="text-decoration:none">看板</a>
+     <a class="tab-btn" href="/teacher" style="text-decoration:none">总览</a>
+      <a class="tab-btn" href="/teacher#cockpit" style="text-decoration:none">周报</a>
+      <a class="tab-btn" href="/teacher#meeting" style="text-decoration:none">会议</a>
+      <a class="tab-btn" href="/teacher#kanban" style="text-decoration:none">看板</a>
       <a class="tab-btn active" href="/meeting-live" style="text-decoration:none">实时会议</a>
-      <a class="tab-btn" href="/teacher" style="text-decoration:none">工具箱</a>
-      <a class="tab-btn" href="/teacher" style="text-decoration:none">投稿</a>
-      <a class="tab-btn" href="/teacher" style="text-decoration:none">排座</a>
-      <a class="tab-btn" href="/teacher" style="text-decoration:none">备课</a>
-      <a class="tab-btn" href="/teacher" style="text-decoration:none">工作量</a>
-      <a class="tab-btn" href="/teacher" style="text-decoration:none">记账</a>
-      <a class="tab-btn" href="/teacher" style="text-decoration:none">面试</a>
-      <a class="tab-btn" href="/teacher" style="text-decoration:none">价值链</a>
+      <a class="tab-btn" href="/teacher#skills" style="text-decoration:none">工具箱</a>
+      <a class="tab-btn" href="/teacher#submissions" style="text-decoration:none">投稿</a>
+      <a class="tab-btn" href="/teacher#seating" style="text-decoration:none">排座</a>
+      <a class="tab-btn" href="/teacher#lesson" style="text-decoration:none">备课</a>
+      <a class="tab-btn" href="/teacher#workload" style="text-decoration:none">工作量</a>
+      <a class="tab-btn" href="/teacher#invoice" style="text-decoration:none">记账</a>
+      <a class="tab-btn" href="/teacher#interview" style="text-decoration:none">面试</a>
+      <a class="tab-btn" href="/teacher#valuecycle" style="text-decoration:none">价值链</a>
     </div>
     <span class="spacer"></span>
     <span class="live-status">{{ statusText }}</span>
@@ -61,13 +61,20 @@
     <div class="live-transcript">
       <div v-if="!transcript && !interim && !recording" class="empty-state" style="padding:40px">
         点击「开始会议」启动实时语音转写。<br>
-        <span style="font-size:12px;color:var(--text-muted)">需要 Chrome/Edge 浏览器并允许麦克风访问</span>
-      </div>
+       <span style="font-size:12px;color:var(--text-muted)">需要 Chrome/Edge 浏览器并允许麦克风访问</span>
+       <br><span style="font-size:12px;color:var(--text-muted)">也可在下方手动输入会议纪要</span>
+     </div>
       <div v-if="recording && !transcript" style="padding:20px;text-align:center;color:var(--text-muted)">
         🔴 正在录音... 请开始发言
       </div>
       <span>{{ transcript }}</span>
       <span class="live-interim">{{ interim }}</span>
+   </div>
+
+    <!-- 手动输入兜底 -->
+    <div class="card" style="margin-top:8px;padding:10px 14px" v-if="!recording">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">手动输入会议纪要（STT 不可用时）</div>
+      <textarea v-model="manualText" class="form-input" rows="4" placeholder="或在此粘贴会议纪要文本..." @input="syncManualText"></textarea>
     </div>
 
     <!-- 轮询进度 -->

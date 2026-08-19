@@ -14,7 +14,7 @@
     <span class="title">AutoProf Lab Cockpit</span>
       <div class="tab-bar">
       <button class="tab-btn" :class="{active: activeTab==='dashboard'}" @click="switchToDashboard">总览</button>
-      <button class="tab-btn" :class="{active: activeTab==='cockpit'}" @click="activeTab='cockpit'">周报</button>
+      <button class="tab-btn" :class="{active: activeTab==='cockpit'}" @click="switchToCockpit">周报</button>
       <button class="tab-btn" :class="{active: activeTab==='meeting'}" @click="switchToMeeting">会议</button>
       <button class="tab-btn" :class="{active: activeTab==='kanban'}" @click="switchToKanban">看板</button>
       <a class="tab-btn" href="/meeting-live" style="text-decoration:none">实时会议</a>
@@ -94,7 +94,7 @@
           </div>
           <div v-for="(msg, i) in chatMessages" :key="i"
                class="chat-bubble" :class="msg.role">
-            {{ msg.content }}
+            <div v-html="formatMessage(msg.content)"></div>
           </div>
         </div>
         <div class="chat-input-row">
@@ -538,10 +538,10 @@
   </div>
   <div class="interview-chat">
     <div v-for="(msg, i) in interviewHistory" :key="i" :class="['chat-bubble', msg.role==='assistant' ? 'ai' : 'user']">
-      <div style="white-space:pre-wrap">{{ msg.content }}</div>
+      <div v-html="formatMessage(msg.content)"></div>
     </div>
     <div v-if="interviewStreaming" class="chat-bubble ai">
-      <div style="white-space:pre-wrap">{{ interviewStreamText }}</div>
+      <div v-html="formatMessage(interviewStreamText)"></div>
     </div>
   </div>
   <div class="card" v-if="interviewHistory.length > 0 && !interviewStreaming">

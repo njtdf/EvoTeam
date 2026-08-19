@@ -143,7 +143,6 @@
       </div>
     </div>
   </div>
-</div>
 <div v-if="activeTab==='interview'" class="interview-view">
   <div class="card">
     <div class="card-title">AI 面试/答辩练习</div>
@@ -167,10 +166,10 @@
   </div>
   <div class="interview-chat">
     <div v-for="(msg, i) in interviewHistory" :key="i" :class="['chat-bubble', msg.role==='assistant' ? 'ai' : 'user']">
-      <div style="white-space:pre-wrap">{{ msg.content }}</div>
+      <div v-html="formatMessage(msg.content)"></div>
     </div>
     <div v-if="interviewStreaming" class="chat-bubble ai">
-      <div style="white-space:pre-wrap">{{ interviewStreamText }}</div>
+      <div v-html="formatMessage(interviewStreamText)"></div>
     </div>
   </div>
   <div class="card" v-if="interviewHistory.length > 0 && !interviewStreaming">
@@ -213,6 +212,7 @@
       <button class="btn btn-primary" @click="submitVcForm" :disabled="!vcForm.primary">提交</button>
     </div>
   </div>
+</div>
 </div>
 <script src="/js/api.js"></script>
 <script src="/js/student.js"></script>

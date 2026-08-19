@@ -2,8 +2,9 @@
 
 async function api(path, options = {}) {
   const resp = await fetch(path, {
-    headers: { 'Content-Type': 'application/json' },
     ...options,
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    credentials: 'same-origin',
   })
   const data = await resp.json().catch(() => ({ error: 'Network error' }))
   if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`)
@@ -17,6 +18,7 @@ async function streamChat(url, body, onChunk, onDone, onError) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
+      credentials: 'same-origin',
     })
 
     if (!resp.ok) {

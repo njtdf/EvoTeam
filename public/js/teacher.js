@@ -1,4 +1,4 @@
-const { createApp, ref, computed, onMounted, nextTick } = Vue
+const { createApp, ref, computed, onMounted, nextTick, watch } = Vue
 
 createApp({
   setup() {
@@ -19,7 +19,7 @@ createApp({
     const briefGenerating = ref(false)
 
     // --- 会议 Tab 状态 ---
-    const activeTab = ref('cockpit')
+    const activeTab = ref('dashboard')
     const meetings = ref([])
     const selectedMeetingDate = ref('')
     const selectedMeeting = ref(null)
@@ -62,7 +62,9 @@ createApp({
       try { return marked.parse(selectedMeeting.value.content) } catch { return selectedMeeting.value.content }
     })
 
-    // ===== 周报 Tab =====
+   // ===== 周报 Tab =====
+    function switchToCockpit() { activeTab.value = 'cockpit' }
+
     async function loadStudents() {
       try {
         const data = await api('/api/students')
@@ -106,6 +108,12 @@ createApp({
     function scrollChatToBottom() {
       const el = chatMessagesEl.value
       if (el) el.scrollTop = el.scrollHeight
+    }
+
+    // Format message content as HTML (Markdown → HTML via marked)
+    function formatMessage(content) {
+      if (!content) return ''
+      try { return marked.parse(content) } catch { return content }
     }
 
     // ===== 会议 Tab =====
@@ -286,12 +294,37 @@ createApp({
       finally { briefGenerating.value = false }
     }
 
-    onMounted(async () => {
-      const u = await getMe()
-      if (!u) { window.location.href = '/login'; return }
-      if (u.role !== 'teacher') { window.location.href = '/student'; return }
-      user.value = u
-      await loadStudents()
+   onMounted(async () => {
+     const u = await getMe()
+     if (!u) { window.location.href = '/login'; return }
+     if (u.role !== 'teacher') { window.location.href = '/student'; return }
+     user.value = u
+     await loadStudents()
+     const hash = window.location.hash.slice(1)
+     const validTabs = ['dashboard','cockpit','meeting','kanban','skills','submissions','seating','lesson','workload','invoice','interview','valuecycle']
+     if (hash && validTabs.includes(hash)) {
+       if (hash === 'dashboard') await switchToDashboard()
+       else if (hash === 'cockpit') switchToCockpit()
+       else if (hash === 'meeting') await switchToMeeting()
+       else if (hash === 'kanban') await switchToKanban()
+       else if (hash === 'skills') await switchToSkills()
+       else if (hash === 'submissions') await switchToSubmissions()
+       else if (hash === 'seating') await switchToSeating()
+       else if (hash === 'lesson') await switchToLesson()
+       else if (hash === 'workload') await switchToWorkload()
+       else if (hash === 'invoice') await switchToInvoice()
+       else if (hash === 'interview') await switchToInterview()
+       else if (hash === 'valuecycle') await switchToValueCycle()
+     } else {
+       await loadDashboard()
+     }
+   })
+
+    // Sync URL hash when tab changes (so refresh/bookmark keeps current tab)
+    watch(activeTab, (newTab) => {
+      if (window.location.hash !== '#' + newTab) {
+        history.replaceState(null, '', '#' + newTab)
+      }
     })
 
     // ===== AI 工具箱 (Feature 6/16) =====
@@ -649,8 +682,10 @@ createApp({
       groupVc, alignments, selectedVcStudent, vcSaving,
       switchToValueCycle, loadGroupVc, loadAlignments, selectVcStudent, saveVcAssessment,
       chatInput, chatStreaming, loadingReport, reportHtml, chatMessagesEl,
-      onStudentChange, sendChat, logout,
-      // 总览
+     onStudentChange, sendChat, logout,
+     formatMessage,
+     switchToCockpit,
+     // 总览
       dashboardData, loadingDashboard, briefGenerating,
       switchToDashboard, loadDashboard, goToStudent, generateBrief,
       // 会议

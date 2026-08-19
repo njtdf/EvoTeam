@@ -254,6 +254,18 @@ body {
   margin-right: auto;
 }
 
+/* Markdown rendering inside chat bubbles (v-html via marked) */
+.chat-bubble > div { white-space: normal; }
+.chat-bubble > div p:first-child { margin-top: 0; }
+.chat-bubble > div p:last-child { margin-bottom: 0; }
+.chat-bubble > div ul, .chat-bubble > div ol { margin: 4px 0; padding-left: 20px; }
+.chat-bubble > div li { margin: 2px 0; }
+.chat-bubble > div code { background: rgba(0,0,0,0.06); padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+.chat-bubble > div pre { background: rgba(0,0,0,0.06); padding: 8px; border-radius: 4px; overflow-x: auto; margin: 4px 0; }
+.chat-bubble > div pre code { background: none; padding: 0; }
+.chat-bubble.user > div code { background: rgba(255,255,255,0.2); }
+.chat-bubble.user > div pre { background: rgba(0,0,0,0.2); }
+
 .chat-input-row {
   display: flex;
   gap: 8px;

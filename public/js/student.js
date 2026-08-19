@@ -36,6 +36,12 @@ createApp({
       catch { previewHtml.value = '<p style="color:#999">Preview error</p>' }
     }
 
+    // Format message content as HTML (Markdown → HTML via marked)
+    function formatMessage(content) {
+      if (!content) return ''
+      try { return marked.parse(content) } catch { return content }
+    }
+
     function generateTemplate() {
       const now = new Date()
       const start = new Date(now.getTime() - 14 * 86400000)
@@ -122,10 +128,12 @@ status: "on_track"
         attempts++
         try {
           const data = await api(`/api/summary/${studentId}`)
-          if (data.summary && !data.summary.summary?.includes('(AI')) {
-            summary.value = data.summary; summaryLoading.value = false; return
+         if (data.summary && !data.summary.summary?.includes('(AI')) {
+            summary.value = data.summary
+            summaryLoading.value = false
             showPolishSuggestion.value = true
-          }
+            return
+         }
           if (attempts < 30) { pollTimer = setTimeout(poll, 2000) }
           else { summaryLoading.value = false; showToast('AI summary taking too long. Check back later.') }
         } catch {
@@ -375,6 +383,7 @@ status: "on_track"
     return {
       user, markdown, previewHtml, submitting, summary, summaryLoading,
       roleLabel, updatePreview, loadTemplate, clearEditor, doSubmit, logout,
+      formatMessage,
       draftLoading, generateDraft,
       myActions, showActions, actionsLoading, toggleActions,
       activeTab, tasks, kanbanCols, switchToKanban, loadMyTasks,
