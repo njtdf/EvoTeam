@@ -316,7 +316,7 @@ createApp({
        else if (hash === 'interview') await switchToInterview()
        else if (hash === 'valuecycle') await switchToValueCycle()
      } else {
-       await loadDashboard()
+       await switchToDashboard()
      }
    })
 
