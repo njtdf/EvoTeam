@@ -4,6 +4,7 @@
 
 import express from 'express'
 import { readFileSync, existsSync, statSync } from 'fs'
+import { readdirSync } from 'fs'
 import { mkdirSync, writeFileSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
@@ -400,6 +401,58 @@ app.get('/api/dashboard', requireRole('teacher'), (req, res) => {
     return { id: s.id, name: s.name, project: s.project || '', report_submitted: reportSubmitted, report_date: reportDate, risk_tags: riskTags, last_summary: lastSummary, open_tasks: openTasks, overdue_tasks: overdueTasks.length, submission_status: activeSub ? activeSub.status : '' }
   })
  res.json({ students: cards, stats: { total: allStudents.length, reported, missing: allStudents.length - reported, overdue_tasks: overdueCount, active_submissions: activeSubs } })
+})
+
+// --- API: Knowledge Base (file management) ---
+// --- API: Agent Management --- //
+app.post('/api/agents/save', requireRole('teacher'), (req, res) => {
+  try {
+    const agents = req.body;
+    if (!Array.isArray(agents)) return res.status(400).json({ error: 'Expected array' });
+    writeFileSync(join(__dirname, 'labos', 'agents-custom.json'), JSON.stringify(agents, null, 2));
+    res.json({ ok: true, count: agents.length });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/agents/custom', requireAuth, (req, res) => {
+  try {
+    const p = join(__dirname, 'labos', 'agents-custom.json');
+    if (!existsSync(p)) return res.json({ agents: [] });
+    res.json({ agents: JSON.parse(readFileSync(p, 'utf8')) });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/kb/list', requireAuth, (req, res) => {
+  try {
+    const labosPath = join(__dirname, 'labos')
+    const result = []
+    function walkDir(dir, rel) {
+      const entries = readdirSync(dir, { withFileTypes: true })
+      for (const e of entries) {
+        if (e.name.startsWith('.') || e.name.startsWith('_')) continue
+        const full = join(dir, e.name)
+        const relPath = rel ? rel + '/' + e.name : e.name
+        if (e.isDirectory()) { walkDir(full, relPath) }
+        else { const stat = statSync(full); result.push({ name: e.name, path: relPath, size: stat.size, modified: stat.mtime.toISOString().slice(0,10), ext: e.name.split('.').pop() }) }
+      }
+    }
+    walkDir(labosPath, '')
+    result.sort((a, b) => b.modified.localeCompare(a.modified))
+    res.json({ files: result.slice(0, 100), path: 'labos/', total: result.length })
+  } catch(e) { res.json({ files: [], path: 'labos/', total: 0, error: e.message }) }
+})
+
+app.get('/api/kb/file', requireAuth, (req, res) => {
+  try {
+    const fpath = join(__dirname, 'labos', req.query.path)
+    if (!fpath.startsWith(join(__dirname, 'labos'))) return res.status(403).json({ error: 'forbidden' })
+    const content = readFileSync(fpath, 'utf8')
+    res.json({ content, path: req.query.path })
+  } catch(e) { res.status(404).json({ error: 'file not found' }) }
 })
 
  // --- API: Agent Chat (Knowledge Navigator) ---

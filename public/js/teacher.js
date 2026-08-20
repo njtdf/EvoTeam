@@ -263,6 +263,7 @@ createApp({
     async function switchToDashboard() {
       activeTab.value = 'dashboard'
       await Promise.all([loadDashboard(), loadTeamFeed()])
+      loadKbFiles()
     }
 
     async function loadDashboard() {
@@ -734,24 +735,71 @@ createApp({
       } catch (e) { console.error('addDecision:', e.message) }
     }
    // --- Agent 面板 ---
-   const agents = ref([
-      { id: 'manager', icon: '🧑‍💼', shortName: '大管家', name: '课题组大管家', role: '总管', description: '总览所有学生状态,触发简报生成', gradient: 'linear-gradient(135deg,#667eea,#764ba2)', status: 'active' },
-      { id: 'summary', icon: '📝', shortName: '总结', name: 'AI 总结 Agent', role: '周报分析', description: '解析学生双周报，生成总结/风险/建议', color: 'blue', status: 'active' },
-      { id: 'meeting', icon: '🗓️', shortName: '会议', name: '会议抽取 Agent', role: '会议纪要', description: '从会议纪要抽取决议和行动项', color: 'green', status: 'active' },
-      { id: 'stt', icon: '🎤', shortName: 'STT', name: 'STT Agent', role: '语音转写', description: '实时会议语音转文字', color: 'orange', status: 'idle' },
-      { id: 'skill', icon: '🧰', shortName: '技能', name: 'Skill Runner', role: '科研工具', description: '运行 idea-evaluator, paper-polish 等', color: 'purple', status: 'active' },
-      { id: 'progress', icon: '📈', shortName: '进度', name: 'Progress Tracker', role: '进度追踪', description: '读取 Codex 历史，辅助生成周报草稿', color: 'teal', status: 'active' },
-      { id: 'review', icon: '🔍', shortName: '审稿', name: 'Review Agent', role: '审稿辅助', description: '论文投稿前审查 (5维度)', color: 'red', status: 'idle' },
-      { id: 'interview', icon: '🎯', shortName: '面试', name: 'Interview Agent', role: '面试/答辩', description: '模拟答辩场景，推荐回答策略', color: 'pink', status: 'idle' },
-      { id: 'valuechain', icon: '🔗', shortName: '价值链', name: 'Value Chain Agent', role: '价值链对齐', description: '课题组与学生价值链对齐分析', color: 'indigo', status: 'active' },
-   ])
+  const agents = ref([
+     { id: 'manager', icon: '🧑‍💼', shortName: '大管家', name: '课题组大管家', role: '总管', description: '总览所有学生状态,触发简报生成', gradient: 'linear-gradient(135deg,#667eea,#764ba2)', status: 'active', capabilities: ['学生状态','简报生成','风险预警','任务调度'] },
+     { id: 'summary', icon: '📝', shortName: '总结', name: 'AI 总结 Agent', role: '周报分析', description: '解析学生双周报，生成总结/风险/建议', color: 'blue', status: 'active', capabilities: ['双周报解析','风险判断','建议生成'] },
+     { id: 'meeting', icon: '🗓️', shortName: '会议', name: '会议抽取 Agent', role: '会议纪要', description: '从会议纪要抽取决议和行动项', color: 'green', status: 'active', capabilities: ['纪要解析','行动项抽取','姓名匹配'] },
+     { id: 'stt', icon: '🎤', shortName: 'STT', name: 'STT Agent', role: '语音转写', description: '实时会议语音转文字', color: 'orange', status: 'idle', capabilities: ['实时STT','FunASR','Web Speech API'] },
+     { id: 'skill', icon: '🧰', shortName: '技能', name: 'Skill Runner', role: '科研工具', description: '运行 idea-evaluator, paper-polish 等', color: 'purple', status: 'active', capabilities: ['11个科研Skill','SSE流式','论文评估'] },
+     { id: 'progress', icon: '📈', shortName: '进度', name: 'Progress Tracker', role: '进度追踪', description: '读取 Codex 历史，辅助生成周报草稿', color: 'teal', status: 'active', capabilities: ['Codex历史','周报草稿','进度追踪'] },
+     { id: 'review', icon: '🔍', shortName: '审稿', name: 'Review Agent', role: '审稿辅助', description: '论文投稿前审查 (5维度)', color: 'red', status: 'idle', capabilities: ['5维度审查','SSE流式','修改建议'] },
+     { id: 'interview', icon: '🎯', shortName: '面试', name: 'Interview Agent', role: '面试/答辩', description: '模拟答辩场景，推荐回答策略', color: 'pink', status: 'idle', capabilities: ['答辩模拟','回答策略','追问训练'] },
+     { id: 'valuechain', icon: '🔗', shortName: '价值链', name: 'Value Chain Agent', role: '价值链对齐', description: '课题组与学生价值链对齐分析', color: 'indigo', status: 'active', capabilities: ['价值对齐','毕业追踪','能力画像'] },
+  ])
 
-   function switchToAgents() {
-     activeTab.value = 'agents'
-     window.location.hash = 'agents'
-   }
+  function switchToAgents() {
+    activeTab.value = 'agents'
+    window.location.hash = 'agents'
+  }
 
-    // ===== Knowledge Navigator: Agent 对话 =====
+  // ===== Agent 管理 (创建/编辑) =====
+  const showAgentModal = ref(false)
+  const newAgent = ref({ name: '', role: '', description: '', icon: '🤖', capabilitiesStr: '' })
+  function createAgent() {
+    const a = newAgent.value
+    if (!a.name.trim()) return
+   const caps = a.capabilitiesStr.split(',').map(s => s.trim()).filter(Boolean)
+    const existing = a.id ? agents.value.find(x => x.id === a.id) : null
+    if (existing) {
+      existing.icon = a.icon || '🤖'
+      existing.shortName = a.name
+      existing.name = a.name
+      existing.role = a.role || '自定义'
+      existing.description = a.description || ''
+      existing.capabilities = caps
+    } else {
+      agents.value.push({
+        id: 'custom-' + Date.now(),
+        icon: a.icon || '🤖',
+        shortName: a.name,
+        name: a.name,
+        role: a.role || '自定义',
+        description: a.description || '',
+        color: 'gray',
+        status: 'idle',
+        capabilities: caps
+      })
+    }
+    fetch('/api/agents/save', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(agents.value)}).catch(()=>{})
+   showAgentModal.value = false
+    newAgent.value = { name: '', role: '', description: '', icon: '🤖', capabilitiesStr: '' }
+  }
+
+  // ===== 知识库 (文件管理) =====
+  const kbFiles = ref([])
+  const kbLoading = ref(false)
+  const kbPath = ref('')
+  async function loadKbFiles() {
+    kbLoading.value = true
+    try {
+      const r = await api('/api/kb/list')
+      kbFiles.value = r.files || []
+      kbPath.value = r.path || ''
+    } catch(e) { console.error('KB load error:', e) }
+    kbLoading.value = false
+  }
+
+  // ===== Knowledge Navigator: Agent 对话 =====
     const activeAgentId = ref(null)
     const agentChatMessages = ref([])
     const agentChatInput = ref('')
@@ -1110,7 +1158,48 @@ createApp({
     }
 
 
-    return {
+    
+  // KB search + file viewer
+  const kbSearch = ref('');
+  const kbViewingFile = ref(false);
+  const kbViewingFileName = ref('');
+  const kbFileContent = ref('');
+  const kbFilteredFiles = computed(() => {
+    if (!kbSearch.value) return kbFiles.value;
+    const q = kbSearch.value.toLowerCase();
+    return kbFiles.value.filter(f => f.name.toLowerCase().includes(q) || f.path.toLowerCase().includes(q));
+  });
+  async function viewKbFile(path) {
+    kbViewingFile.value = true;
+    kbViewingFileName.value = path.split('/').pop();
+    kbFileContent.value = '加载中...';
+    try {
+      const r = await fetch('/api/kb/file?path=' + encodeURIComponent(path));
+      const d = await r.json();
+      kbFileContent.value = d.content || d.error || '无内容';
+    } catch(e) { kbFileContent.value = '加载失败: ' + e.message; }
+  }
+
+  // Agent management
+  const agentSubTab = ref('agents');
+  function editAgent(a) { showAgentModal.value = true; newAgent.value = {...a, capabilitiesStr: (a.capabilities||[]).join(',')}; }
+  function deleteAgent(id) {
+    if (!confirm('确定删除此 Agent?')) return;
+    agents.value = agents.value.filter(a => a.id !== id);
+    // Save to file
+    fetch('/api/agents/save', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(agents.value)});
+  }
+
+  // MCP config
+  const mcpConfig = ref({url:'', tools:'', forbidden:''});
+  const mcpSaved = ref(false);
+  function saveMcpConfig() {
+    mcpSaved.value = true;
+    setTimeout(() => mcpSaved.value = false, 3000);
+  }
+
+
+return {
       user, students, selectedStudentId, report, summary, chatMessages,
       // 价值链
       groupVc, alignments, selectedVcStudent, vcSaving,
@@ -1145,8 +1234,9 @@ createApp({
       switchToSeating, generateSeating, loadSeatingDetail,
       // 备课
       lessonCourse, lessonChapter, lessonTopic, lessonTextbook, lessonExtra, lessonStreaming, lessonOutput, lessonOutputHtml,
-      switchToLesson, generateLessonPlan, loadLessonDetail,
-      // 工作量
+     switchToLesson, generateLessonPlan, loadLessonDetail,
+     lessonHistory,
+     // 工作量
       workloadYear, workloadResult, wlCourses,
       switchToWorkload, calcWorkload, loadCoeffs,
       // 记账
@@ -1156,8 +1246,12 @@ createApp({
       interviewScenario, interviewTopic, interviewContext,
       interviewHistory, interviewAnswer, interviewStreaming, interviewStreamText,
       switchToInterview, startInterview, sendInterviewAnswer, sendInterviewCoach,
-      // Agent + Calendar
-      agents, switchToAgents,
+     // Agent + Calendar
+     agents, switchToAgents,
+      showAgentModal, newAgent, createAgent,
+      agentSubTab, editAgent, deleteAgent, mcpConfig, mcpSaved, saveMcpConfig,
+      kbFiles, kbLoading, kbPath, loadKbFiles,
+      kbSearch, kbFilteredFiles, kbViewingFile, kbViewingFileName, kbFileContent, viewKbFile,
       // Knowledge Navigator
       activeAgentId, agentChatMessages, agentChatInput, agentStreaming, agentStreamText,
       activeAgent, selectAgent, sendAgentChat,

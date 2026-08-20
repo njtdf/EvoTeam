@@ -4,9 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AutoProf - Teacher Dashboard</title>
-<link rel="stylesheet" href="/css/app.css?v=060">
+
+
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<link rel="stylesheet" href="/css/app.css?v=073">
 </head>
 <body>
 <div id="app">
@@ -115,6 +117,38 @@
       </div>
       <div v-if="teamFeed.length===0" class="text-muted" style="padding:12px">暂无动态</div>
     </div>
+    <!-- Knowledge Base (file management) -->
+    <div v-if="!activeAgentId" class="kn-kb">
+      <div class="kn-section-label">
+        <span>📚 Knowledge Base</span>
+        <input class="kb-search" v-model="kbSearch" placeholder="搜索文件..." style="margin-left:8px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:13px">
+        <button class="btn btn-sm btn-secondary" @click="loadKbFiles" style="margin-left:4px">🔄</button>
+      </div>
+      <div v-if="kbLoading" class="text-muted" style="padding:12px">加载中...</div>
+      <div v-else-if="kbFilteredFiles.length===0" class="text-muted" style="padding:12px">无文件</div>
+      <div v-else class="kb-file-list">
+        <div class="kb-file-item" v-for="f in kbFilteredFiles.slice(0,30)" :key="f.path" @click="viewKbFile(f.path)">
+          <span class="kb-file-icon kb-ext-{{f.ext}}">{{ f.ext === 'md' ? '📝' : f.ext === 'json' ? '🔧' : f.ext === 'yaml' ? '⚙️' : '📄' }}</span>
+          <span class="kb-file-name">{{ f.name }}</span>
+          <span class="kb-file-path">{{ f.path }}</span>
+          <span class="kb-file-size">{{ f.size < 1024 ? f.size + 'B' : Math.round(f.size/1024) + 'KB' }}</span>
+        </div>
+        <div v-if="kbFilteredFiles.length > 30" class="text-muted" style="padding:8px;font-size:12px">还有 {{ kbFilteredFiles.length - 30 }} 个文件...</div>
+      </div>
+      <!-- KB file viewer modal -->
+      <div v-if="kbViewingFile" class="modal-overlay" @click.self="kbViewingFile=null">
+        <div class="modal modal-lg">
+          <div class="modal-header">
+            <span class="modal-title">📄 {{ kbViewingFileName }}</span>
+            <button class="btn btn-sm" @click="kbViewingFile=null">✕</button>
+          </div>
+          <div class="modal-body">
+            <pre class="kb-file-content">{{ kbFileContent }}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- 周报 Cockpit Tab -->
@@ -839,30 +873,126 @@
           <button class="btn btn-sm btn-primary" @click="addDecision">+决策</button>
         </div>
       </div>
-    </div>
+  </div>
+ </div>
   </div>
 
-  <!-- Agent 面板 -->
+ <!-- Agent 面板 -->
   <div v-if="activeTab==='agents'" class="agent-view">
-    <div class="card-title" style="margin-bottom:12px">LabOS Agent 总览</div>
-    <div class="agent-grid">
-      <div class="agent-card" v-for="a in agents" :key="a.name">
-        <div class="agent-card-header">
-          <span class="agent-icon">{{ a.icon }}</span>
-          <span class="agent-name">{{ a.name }}</span>
-          <span class="agent-status" :class="'status-' + a.status">{{ a.status === 'active' ? '✅ 运行中' : '⏳ 计划中' }}</span>
+    <div class="card-title" style="margin-bottom:12px">EvoTeam Agent 控制中心</div>
+    <div class="sub-tab-bar">
+      <button class="sub-tab" :class="{active: agentSubTab==='agents'}" @click="agentSubTab='agents'">🤖 Agents</button>
+      <button class="sub-tab" :class="{active: agentSubTab==='skills'}" @click="agentSubTab='skills'">🧰 Skills</button>
+      <button class="sub-tab" :class="{active: agentSubTab==='plugins'}" @click="agentSubTab='plugins'">🔌 Plugins</button>
+      <button class="sub-tab" :class="{active: agentSubTab==='mcp'}" @click="agentSubTab='mcp'">⚙️ MCP</button>
+    </div>
+
+    <div v-if="agentSubTab==='agents'">
+      <button class="btn btn-sm btn-primary" style="margin:8px 0" @click="showAgentModal=true">+ 创建 Agent</button>
+      <div class="agent-grid">
+        <div class="agent-card" v-for="a in agents" :key="a.id || a.name">
+          <div class="agent-card-header">
+            <span class="agent-icon">{{ a.icon }}</span>
+            <span class="agent-name">{{ a.name }}</span>
+            <span class="agent-status" :class="'status-' + a.status">{{ a.status === 'active' ? '✅ 运行中' : '⏳ 计划中' }}</span>
+          </div>
+          <div class="agent-role">{{ a.role }}</div>
+          <div class="agent-desc">{{ a.description }}</div>
+          <div class="agent-caps">
+            <span class="tag" v-for="c in (a.capabilities||[])" :key="c">{{ c }}</span>
+          </div>
+          <div class="agent-card-footer">
+            <button class="btn btn-sm btn-secondary" @click="selectAgent(a.id)">💬 对话</button>
+            <button class="btn btn-sm btn-secondary" @click="editAgent(a)">✏️ 编辑</button>
+            <button class="btn btn-sm btn-danger" @click="deleteAgent(a.id || a.name)">🗑️ 删除</button>
+          </div>
         </div>
-        <div class="agent-role">{{ a.role }}</div>
-        <div class="agent-desc">{{ a.description }}</div>
-        <div class="agent-caps">
-          <span class="tag" v-for="c in a.capabilities" :key="c">{{ c }}</span>
+      </div>
+      <div v-if="agents.length===0" class="empty-state" style="padding:24px">暂无 Agent — 点击"创建 Agent"添加</div>
+    </div>
+
+    <div v-if="agentSubTab==='skills'">
+      <div class="skills-grid">
+        <div class="skill-card" v-for="sk in skillManifest" :key="sk.name" @click="goToSkill(sk.name)">
+          <div class="skill-name">{{ sk.name }}</div>
+          <div class="skill-desc">{{ sk.description }}</div>
+        </div>
+      </div>
+      <div v-if="skillManifest.length===0" class="empty-state" style="padding:24px">暂无 Skill — 先到"科研工具 → 工具箱"加载</div>
+    </div>
+
+    <div v-if="agentSubTab==='plugins'">
+      <div class="plugin-list">
+        <div class="plugin-item">
+          <span class="plugin-icon">📰</span>
+          <div class="plugin-info"><div class="plugin-name">RSS News</div><div class="plugin-desc">arXiv / IEEE 每日推送</div></div>
+          <span class="plugin-status status-active">✅ 已加载</span>
+        </div>
+        <div class="plugin-item">
+          <span class="plugin-icon">📧</span>
+          <div class="plugin-info"><div class="plugin-name">Email Sync</div><div class="plugin-desc">IMAP 未读邮件 → 任务</div></div>
+          <span class="plugin-status status-pending">⏳ 待配置 .env</span>
+        </div>
+        <div class="plugin-item">
+          <span class="plugin-icon">🎤</span>
+          <div class="plugin-info"><div class="plugin-name">STT (FunASR)</div><div class="plugin-desc">实时会议语音转文字</div></div>
+          <span class="plugin-status status-pending">⏳ 待安装 FunASR</span>
+        </div>
+        <div class="plugin-item">
+          <span class="plugin-icon">🔌</span>
+          <div class="plugin-info"><div class="plugin-name">CLI Bridge</div><div class="plugin-desc">labos.mjs 命令行接入</div></div>
+          <span class="plugin-status status-active">✅ 已加载</span>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="agentSubTab==='mcp'">
+      <div class="card" style="max-width:560px;padding:16px;margin-top:8px">
+        <div class="form-group">
+          <label class="form-label">MCP Server URL</label>
+          <input class="form-input" v-model="mcpConfig.url" placeholder="http://localhost:8080/mcp">
+        </div>
+        <div class="form-group">
+          <label class="form-label">允许的工具 (逗号分隔)</label>
+          <input class="form-input" v-model="mcpConfig.tools" placeholder="read_file, write_file, run_python">
+        </div>
+        <div class="form-group">
+          <label class="form-label">禁止的工具 (逗号分隔)</label>
+          <input class="form-input" v-model="mcpConfig.forbidden" placeholder="send_email, delete_files">
+        </div>
+        <button class="btn btn-primary" @click="saveMcpConfig">💾 保存配置</button>
+        <span v-if="mcpSaved" class="text-muted" style="margin-left:8px">✅ 已保存</span>
+      </div>
+    </div>
+
+    <div v-if="showAgentModal" class="modal-overlay" @click.self="showAgentModal=false">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-title">{{ newAgent.id ? '编辑 Agent' : '创建 Agent' }}</span>
+          <button class="btn btn-sm" @click="showAgentModal=false">✕</button>
+        </div>
+        <div class="modal-body">
+          <label class="form-label">名称</label>
+          <input class="form-input" v-model="newAgent.name" placeholder="Agent 名称">
+          <label class="form-label">角色</label>
+          <input class="form-input" v-model="newAgent.role" placeholder="如: 周报分析">
+          <label class="form-label">描述</label>
+          <textarea class="form-input" v-model="newAgent.description" rows="2" placeholder="Agent 做什么..."></textarea>
+          <label class="form-label">Emoji 图标</label>
+          <input class="form-input" v-model="newAgent.icon" placeholder="如: 📝" style="width:60px">
+          <label class="form-label">能力标签 (逗号分隔)</label>
+          <input class="form-input" v-model="newAgent.capabilitiesStr" placeholder="学生状态,简报生成,风险预警">
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="showAgentModal=false">取消</button>
+          <button class="btn btn-primary" @click="createAgent">{{ newAgent.id ? '保存' : '创建' }}</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- 日历 -->
-  <div v-if="activeTab==='calendar'" class="calendar-view">
+ <!-- 日历 -->
+ <div v-if="activeTab==='calendar'" class="calendar-view">
     <div class="calendar-header">
       <button class="btn btn-secondary btn-sm" @click="prevMonth">←</button>
       <span class="calendar-title">{{ calendarLabel }}</span>
@@ -1012,11 +1142,13 @@
   </div>
 
   <!-- 考试/教学 sub-tab placeholder views handled in exam/teaching tabs above -->
-  </main>
-    </div>
-  </div>
-</div>
-<script src="/js/api.js?v=070"></script>
-<script src="/js/teacher.js?v=070"></script>
+ </main>
+   </div>
+ </div>
+
+
+
+<script src="/js/api.js?v=073"></script>
+<script src="/js/teacher.js?v=073"></script>
 </body>
 </html>

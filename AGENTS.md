@@ -36,3 +36,9 @@ Remove-Item script.mjs
 - 同时更新所有 HTML 文件的 `?v=XXX` cache-bust 字符串
 - DEVLOG.md **只追加**, 不覆盖, 不删除历史
 - git commit message 格式: `feat: vX.Y.Z 简述` 或 `fix: 简述`
+
+## 额外教训 (2026-08-20 追加)
+
+- **版本不匹配 = 无限重载 = 全部空白页**: api.js 的 checkVersion() 在 server 版本 ≠ client 版本时调用 window.location.reload()，如果没有 localStorage 防护，会无限循环导致 Vue 永远无法 mount。**每次改 APP_VERSION 必须同步改 VERSION 文件**，否则所有页面空白。
+- **server.js import 风格**: 用 `import { readFileSync, existsSync } from 'fs'` 时，代码中**不能**用 `fs.readFileSync` / `fs.existsSync`。要么用命名函数，要么加 `import fs from 'fs'`。
+- **`/api/agents/custom` 500 错误**: 上述 import 风格问题导致。修复：所有 `fs.` → 命名导入函数。
