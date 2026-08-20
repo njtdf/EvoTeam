@@ -1,0 +1,22 @@
+{
+  "student_id": "s01",
+  "student_name": "宋禧",
+  "research_direction": "",
+  "key_terms": [
+    "嘎嘎嘎嘎嘎嘎",
+    "period",
+    "不不不不不不",
+    "Work"
+  ],
+  "recent_progress": [
+    "学生报告了进度正常，但具体进展描述不清晰，仅包含无意义的占位符文本。",
+    "学生报告了进度正常，但具体进展描述不清晰，仅包含无意义的占位符文本。"
+  ],
+  "known_blockers": [
+    "progress stalled",
+    "progress stalled",
+    "progress stalled"
+  ],
+  "skill_history": [],
+  "last_updated": "2026-08-19T07:42:22.994Z"
+}

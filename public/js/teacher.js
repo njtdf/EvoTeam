@@ -1,4 +1,4 @@
-const { createApp, ref, computed, onMounted, nextTick, watch } = Vue
+﻿const { createApp, ref, computed, onMounted, nextTick, watch } = Vue
 
 createApp({
   setup() {
@@ -679,6 +679,53 @@ createApp({
     }
 
 
+    // v2.1 W6a: Graduation / Capability / Decision
+    const capabilityLabels = {
+      modeling: '建模', experiment: '实验', writing: '写作', coding: '编程',
+      presentation: '表达', literature: '文献', independence: '独立性'
+    }
+    const newDecision = ref({ text: '', rationale: '' })
+
+    async function saveGraduation() {
+      if (!selectedVcStudent.value) return
+      try {
+        const id = selectedVcStudent.value.student_id
+        const gs = selectedVcStudent.value.graduation_state
+        const r = await fetch(`/api/valuecycle/${id}/graduation`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(gs)
+        })
+        if (r.ok) { selectedVcStudent.value = (await r.json()).valuecycle; await loadAlignments() }
+      } catch (e) { console.error('saveGraduation:', e.message) }
+    }
+
+    async function saveCapability() {
+      if (!selectedVcStudent.value) return
+      try {
+        const id = selectedVcStudent.value.student_id
+        const cap = selectedVcStudent.value.capability
+        const r = await fetch(`/api/valuecycle/${id}/capability`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cap)
+        })
+        if (r.ok) { selectedVcStudent.value = (await r.json()).valuecycle; await loadAlignments() }
+      } catch (e) { console.error('saveCapability:', e.message) }
+    }
+
+    async function addDecision() {
+      if (!selectedVcStudent.value || !newDecision.value.text) return
+      try {
+        const id = selectedVcStudent.value.student_id
+        const r = await fetch(`/api/valuecycle/${id}/decision`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ decision: newDecision.value.text, rationale: newDecision.value.rationale })
+        })
+        if (r.ok) {
+          selectedVcStudent.value = (await r.json()).valuecycle
+          newDecision.value = { text: '', rationale: '' }
+        }
+      } catch (e) { console.error('addDecision:', e.message) }
+    }
     // --- Agent 面板 ---
     const agents = ref([
       { icon: '📝', name: 'AI Summary Agent', role: '周报分析', description: '解析学生双周报，生成总结/风险/建议', capabilities: ['NLP', 'Risk Detection'], status: 'active' },
@@ -764,6 +811,8 @@ createApp({
       // 价值链
       groupVc, alignments, selectedVcStudent, vcSaving,
       switchToValueCycle, loadGroupVc, loadAlignments, selectVcStudent, saveVcAssessment,
+      // v2.1 W6a
+      capabilityLabels, newDecision, saveGraduation, saveCapability, addDecision,
       chatInput, chatStreaming, loadingReport, reportHtml, chatMessagesEl,
      onStudentChange, sendChat, logout,
      formatMessage,

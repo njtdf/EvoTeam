@@ -41,6 +41,7 @@ import { createRoom, listRooms, getRoom, addMessage, joinRoom, leaveRoom, delete
 import { buildStudentContext } from './lib/ai-context.js'
 import { loadValueCycle, updateValueCycle, loadGroupValueCycle, saveGroupValueCycle, getAllAlignments } from './lib/valuecycle.js'
 import { loadCalendarEvents } from './lib/calendar.js'
+import { searchTrajectories, getTrajectoryStats, listTrajectories } from './lib/trajectory.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -916,6 +917,81 @@ app.put('/api/valuecycle/:id/assessment', requireRole('teacher'), (req, res) => 
       advisor_assessment: { ...vc.advisor_assessment, ...req.body }
     })
     res.json({ ok: true, valuecycle: loadValueCycle(req.params.id) })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// --- Trajectory (v2.1 W7a) ---
+app.get('/api/trajectories/:actor', requireRole('teacher'), (req, res) => {
+  try {
+    const results = searchTrajectories({
+      actor_id: req.params.actor,
+      session_type: req.query.session_type,
+      tags: req.query.tags ? req.query.tags.split(',') : undefined,
+      limit: parseInt(req.query.limit) || 20
+    })
+    res.json({ trajectories: results, total: results.length })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.get('/api/trajectory-stats/:actor', requireRole('teacher'), (req, res) => {
+  try {
+    const stats = getTrajectoryStats(req.params.actor)
+    res.json(stats)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.get('/api/trajectories', requireRole('teacher'), (req, res) => {
+  try {
+    const results = listTrajectories(parseInt(req.query.limit) || 50)
+    res.json({ trajectories: results, total: results.length })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// --- ValueCycle extensions (v2.1 W6a) ---
+app.put('/api/valuecycle/:id/graduation', requireRole('teacher'), (req, res) => {
+  try {
+    const vc = loadValueCycle(req.params.id)
+    updateValueCycle(req.params.id, {
+      graduation_state: { ...vc.graduation_state, ...req.body }
+    })
+    res.json({ ok: true, valuecycle: loadValueCycle(req.params.id) })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.put('/api/valuecycle/:id/capability', requireRole('teacher'), (req, res) => {
+  try {
+    const vc = loadValueCycle(req.params.id)
+    updateValueCycle(req.params.id, {
+      capability: { ...vc.capability, ...req.body }
+    })
+    res.json({ ok: true, valuecycle: loadValueCycle(req.params.id) })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.post('/api/valuecycle/:id/decision', requireRole('teacher'), (req, res) => {
+  try {
+    const vc = loadValueCycle(req.params.id)
+    const log = vc.decision_log || []
+    log.push({
+      date: req.body.date || new Date().toISOString().slice(0, 10),
+      decision: req.body.decision || '',
+      rationale: req.body.rationale || '',
+      outcome: req.body.outcome || 'pending'
+    })
+    updateValueCycle(req.params.id, { decision_log: log })
+    res.json({ ok: true, decision_count: log.length, valuecycle: loadValueCycle(req.params.id) })
   } catch (e) {
     res.status(500).json({ error: e.message })
   }

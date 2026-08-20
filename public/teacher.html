@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AutoProf - Teacher Dashboard</title>
-<link rel="stylesheet" href="/css/app.css?v=053">
+<link rel="stylesheet" href="/css/app.css?v=060">
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -659,7 +659,69 @@
         <div class="form-row">
           <textarea v-model="selectedVcStudent.advisor_assessment.notes" class="form-input" rows="2" placeholder="导师备注..."></textarea>
         </div>
-        <button class="btn btn-primary" @click="saveVcAssessment" :disabled="vcSaving">{{ vcSaving ? '保存中...' : '保存评估' }}</button>
+       <button class="btn btn-primary" @click="saveVcAssessment" :disabled="vcSaving">{{ vcSaving ? '保存中...' : '保存评估' }}</button>
+     </div>
+      <!-- v2.1 W6a: Graduation State -->
+      <div class="vc-detail-section" v-if="selectedVcStudent.graduation_state">
+        <div class="vc-label">毕业状态 (v2.1)</div>
+        <div class="form-row">
+          <label>学位:</label>
+          <select v-model="selectedVcStudent.graduation_state.degree" class="form-input" style="width:auto" @change="saveGraduation">
+            <option value="bachelor">本科</option>
+            <option value="master">硕士</option>
+            <option value="phd">博士</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>预计毕业:</label>
+          <input type="month" v-model="selectedVcStudent.graduation_state.expected_graduation" class="form-input" style="width:auto" @change="saveGraduation" />
+        </div>
+        <div class="form-row">
+          <label>进度:</label>
+          <input type="range" min="0" max="100" v-model="selectedVcStudent.graduation_state.progress_pct" class="vc-slider" @change="saveGraduation" />
+          <span>{{ selectedVcStudent.graduation_state.progress_pct }}%</span>
+        </div>
+        <div class="form-row">
+          <label>风险等级:</label>
+          <select v-model="selectedVcStudent.graduation_state.risk_level" class="form-input" style="width:auto" @change="saveGraduation">
+            <option value="low">低</option>
+            <option value="medium">中</option>
+            <option value="high">高</option>
+            <option value="critical">严重</option>
+            <option value="unknown">未知</option>
+          </select>
+        </div>
+        <div class="graduation-bar-outer">
+          <div class="graduation-bar-inner" :class="'risk-' + selectedVcStudent.graduation_state.risk_level"
+               :style="{ width: selectedVcStudent.graduation_state.progress_pct + '%' }"></div>
+        </div>
+      </div>
+      <!-- v2.1 W6a: Capability Radar -->
+      <div class="vc-detail-section" v-if="selectedVcStudent.capability">
+        <div class="vc-label">能力画像 (v2.1, 0-5)</div>
+        <div class="capability-radar">
+          <div class="capability-row" v-for="(val, key) in selectedVcStudent.capability" :key="key">
+            <span class="capability-label">{{ capabilityLabels[key] || key }}</span>
+            <div class="capability-bar-outer"><div class="capability-bar-inner" :style="{ width: (val / 5 * 100) + '%' }"></div></div>
+            <input type="number" min="0" max="5" v-model="selectedVcStudent.capability[key]" class="capability-input" @change="saveCapability" />
+          </div>
+        </div>
+      </div>
+      <!-- v2.1 W6a: Decision Log -->
+      <div class="vc-detail-section" v-if="selectedVcStudent.decision_log">
+        <div class="vc-label">决策记录 ({{ selectedVcStudent.decision_log.length }}条)</div>
+        <div class="decision-log">
+          <div class="decision-item" v-for="(d, i) in selectedVcStudent.decision_log" :key="i">
+            <span class="decision-date">{{ d.date }}</span>
+            <span class="decision-text">{{ d.decision }}</span>
+            <span class="decision-outcome" :class="'outcome-' + d.outcome">{{ d.outcome }}</span>
+          </div>
+        </div>
+        <div class="form-row" style="margin-top:8px">
+          <input type="text" v-model="newDecision.text" placeholder="决策内容..." class="form-input" style="flex:1" />
+          <input type="text" v-model="newDecision.rationale" placeholder="理由..." class="form-input" style="flex:1" />
+          <button class="btn btn-sm btn-primary" @click="addDecision">+决策</button>
+        </div>
       </div>
     </div>
   </div>
@@ -705,7 +767,7 @@
     </main>
   </div>
 </div>
-<script src="/js/api.js?v=053"></script>
-<script src="/js/teacher.js?v=053"></script>
+<script src="/js/api.js?v=060"></script>
+<script src="/js/teacher.js?v=060"></script>
 </body>
 </html>

@@ -907,3 +907,34 @@ body {
   background: #ffebee;
   color: #c62828;
 }
+
+/* v2.1 W6a: Graduation / Capability / Decision */
+.graduation-bar-outer {
+  width: 100%; height: 20px; background: #e0e0e0; border-radius: 10px; overflow: hidden; margin: 8px 0;
+}
+.graduation-bar-inner {
+  height: 100%; border-radius: 10px; transition: width 0.3s; min-width: 2%;
+}
+.risk-low { background: #4caf50; }
+.risk-medium { background: #ff9800; }
+.risk-high { background: #f44336; }
+.risk-critical { background: #b71c1c; }
+.risk-unknown { background: #9e9e9e; }
+
+.capability-radar { display: flex; flex-direction: column; gap: 6px; }
+.capability-row { display: flex; align-items: center; gap: 8px; }
+.capability-label { width: 50px; font-size: 13px; color: #555; text-align: right; }
+.capability-bar-outer { flex: 1; height: 14px; background: #e0e0e0; border-radius: 7px; overflow: hidden; }
+.capability-bar-inner { height: 100%; background: #2196f3; border-radius: 7px; transition: width 0.3s; }
+.capability-input { width: 36px; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 2px; font-size: 13px; }
+
+.decision-log { display: flex; flex-direction: column; gap: 4px; max-height: 200px; overflow-y: auto; }
+.decision-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+.decision-date { color: #888; font-size: 12px; white-space: nowrap; }
+.decision-text { flex: 1; }
+.decision-outcome { font-size: 11px; padding: 1px 6px; border-radius: 8px; text-transform: uppercase; }
+.outcome-pending { background: #fff3e0; color: #e65100; }
+.outcome-continue { background: #e8f5e9; color: #2e7d32; }
+.outcome-revise { background: #fff8e1; color: #f57f17; }
+.outcome-pivot { background: #e3f2fd; color: #1565c0; }
+.outcome-pause { background: #fce4ec; color: #c62828; }
