@@ -42,3 +42,23 @@ Remove-Item script.mjs
 - **版本不匹配 = 无限重载 = 全部空白页**: api.js 的 checkVersion() 在 server 版本 ≠ client 版本时调用 window.location.reload()，如果没有 localStorage 防护，会无限循环导致 Vue 永远无法 mount。**每次改 APP_VERSION 必须同步改 VERSION 文件**，否则所有页面空白。
 - **server.js import 风格**: 用 `import { readFileSync, existsSync } from 'fs'` 时，代码中**不能**用 `fs.readFileSync` / `fs.existsSync`。要么用命名函数，要么加 `import fs from 'fs'`。
 - **`/api/agents/custom` 500 错误**: 上述 import 风格问题导致。修复：所有 `fs.` → 命名导入函数。
+
+## PowerShell 编码陷阱 (2026-08-20 追加)
+
+**问题**: PowerShell Get-Content / type 默认用系统编码 (GBK) 读取 UTF-8 文件，中文显示为乱码。
+
+**规则**:
+1. 永远不用 PowerShell Get-Content 验证含中文的文件内容
+2. 用 node 读文件：写一个小 .mjs 脚本，console.log(fs.readFileSync(path,'utf8'))
+3. Set-Content 默认 GBK，写中文用 node fs.writeFileSync(path, content, 'utf8')
+4. 在 node_repl 里用 fs.appendFileSync — Node 默认 UTF-8
+
+**已确认的失败模式**:
+- Get-Content DEVLOG.md -Tail 30 -> 中文全乱码 (文件实际正确)
+- type CHANGELOG.md -> 中文全乱码 (文件实际正确)
+
+**可靠替代**:
+```bash
+node -e "const fs=require('fs'); console.log(fs.readFileSync('path','utf8').slice(-500))"
+```
+
