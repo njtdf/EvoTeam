@@ -44,6 +44,7 @@ import { loadCalendarEvents } from './lib/calendar.js'
 import { searchTrajectories, getTrajectoryStats, listTrajectories } from './lib/trajectory.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
+const labosDir = join(__dirname, 'labos')
 const app = express()
 // Load .env into process.env (no dotenv dependency; matches ai.js direct-read pattern)
 ;(function loadEnv() {
@@ -398,8 +399,98 @@ app.get('/api/dashboard', requireRole('teacher'), (req, res) => {
     if (activeSub) activeSubs++
     return { id: s.id, name: s.name, project: s.project || '', report_submitted: reportSubmitted, report_date: reportDate, risk_tags: riskTags, last_summary: lastSummary, open_tasks: openTasks, overdue_tasks: overdueTasks.length, submission_status: activeSub ? activeSub.status : '' }
   })
-  res.json({ students: cards, stats: { total: allStudents.length, reported, missing: allStudents.length - reported, overdue_tasks: overdueCount, active_submissions: activeSubs } })
+ res.json({ students: cards, stats: { total: allStudents.length, reported, missing: allStudents.length - reported, overdue_tasks: overdueCount, active_submissions: activeSubs } })
 })
+
+ // --- API: Agent Chat (Knowledge Navigator) ---
+ const agentDir = join(labosDir, 'agent-chat')
+ if (!existsSync(agentDir)) mkdirSync(agentDir, { recursive: true })
+
+ const agentPrompts = {
+   manager: '你是课题组大管家。你有全部学生状态数据(周报提交、风险标签、任务数、逾期数)。导师问你问题时,基于学生数据给出简洁回答。可用中文回答。',
+   summary: '你是周报分析 Agent。擅长解析学生双周报,生成总结、风险判断、建议。帮助导师快速了解学生进展。',
+   meeting: '你是会议抽取 Agent。从会议纪要中抽取决议和行动项,匹配学生姓名。',
+   stt: '你是实时语音转写 Agent。负责会议语音转文字。',
+   skill: '你是科研技能 Agent。可运行 idea-evaluator, paper-polish, pre-submission-reviewer 等技能。',
+   progress: '你是进度追踪 Agent。读取 Codex 工作历史,辅助生成周报草稿。',
+   review: '你是审稿辅助 Agent。从5个维度审查论文:宏观逻辑、写作细节、英文语法、LaTeX格式、图表质量。',
+   interview: '你是面试/答辩模拟 Agent。模拟答辩场景,推荐回答策略。',
+   valuechain: '你是价值链对齐 Agent。分析课题组价值链与学生个人价值链的对齐情况。',
+ }
+
+ function loadAgentChat(agentId) {
+   const f = join(agentDir, agentId + '.json')
+   if (!existsSync(f)) return []
+   try { return JSON.parse(readFileSync(f, 'utf8')) } catch { return [] }
+ }
+ function saveAgentChat(agentId, messages) {
+   const trimmed = messages.slice(-50)
+   writeFileSync(join(agentDir, agentId + '.json'), JSON.stringify(trimmed, null, 2))
+ }
+
+ function buildManagerContext() {
+   const config = loadConfig()
+   const allStudents = loadStudents().filter(s => s.role !== 'teacher')
+   const allTasks = getAllTasks()
+   const today = new Date().toISOString().slice(0, 10)
+   let ctx = '=== 课题组全貌 ===\n'
+   for (const s of allStudents) {
+     const reportPath = getLatestReport(config, s.id)
+     const summ = loadSummary(s.id)
+     const sTasks = allTasks.filter(t => t.owner_student_id === s.id)
+     const open = sTasks.filter(t => t.status === 'todo' || t.status === 'in_progress').length
+     const overdue = sTasks.filter(t => t.deadline && t.deadline < today && t.status !== 'done').length
+     ctx += `${s.id} ${s.name} [${s.project || ''}] 周报:${reportPath ? '已交' : '未交'} 任务:${open} 逾期:${overdue}\n`
+     if (summ && summ.summary) ctx += `  总结: ${summ.summary}\n`
+     if (summ && summ.risks && summ.risks.length) ctx += `  风险: ${summ.risks.join('; ')}\n`
+   }
+   return ctx
+ }
+
+ app.get('/api/agent-chat/:agentId', requireRole('teacher'), (req, res) => {
+   const history = loadAgentChat(req.params.agentId)
+   res.json({ messages: history })
+ })
+
+ app.post('/api/agent-chat/:agentId', requireRole('teacher'), (req, res) => {
+   const agentId = req.params.agentId
+   const { message } = req.body
+   if (!message || !message.trim()) return res.status(400).json({ error: 'Empty message' })
+
+   const history = loadAgentChat(agentId)
+   history.push({ role: 'user', content: message, timestamp: new Date().toISOString() })
+
+   let systemPrompt = agentPrompts[agentId] || '你是 AI 助手。'
+   if (agentId === 'manager') systemPrompt += '\n\n' + buildManagerContext()
+
+   const messages = [
+     { role: 'system', content: systemPrompt },
+     ...history.map(h => ({ role: h.role === 'user' ? 'user' : 'assistant', content: h.content })),
+   ]
+
+   res.setHeader('Content-Type', 'text/event-stream; charset=utf-8')
+   res.setHeader('Cache-Control', 'no-cache')
+   res.setHeader('Connection', 'keep-alive')
+   res.flushHeaders()
+
+   let fullText = ''
+   chatStream(messages, (chunk) => {
+     fullText += chunk
+     res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`)
+   }).then(() => {
+     history.push({ role: 'assistant', content: fullText, timestamp: new Date().toISOString() })
+     saveAgentChat(agentId, history)
+     res.write(`data: [DONE]\n\n`)
+     res.end()
+   }).catch((e) => {
+     console.error('[agent-chat] stream error:', e.message)
+     res.write(`data: ${JSON.stringify({ content: '请求失败: ' + e.message })}\n\n`)
+     res.write(`data: [DONE]\n\n`)
+     res.end()
+   })
+
+   res.on('close', () => {})
+ })
 
  // --- API: Meeting (Feature 2: 会议纪要→行动指令) ---
  // 上传纪要 → 异步 AI 抽取;导师改派确认;学生只读查看分配给自己的行动

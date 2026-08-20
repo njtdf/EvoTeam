@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AutoProf - Student</title>
-<link rel="stylesheet" href="/css/app.css?v=060">
+<link rel="stylesheet" href="/css/app.css?v=070">
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -13,12 +13,15 @@
   <div class="app-container">
     <aside class="sidebar">
       <div class="sidebar-header">
-        <span class="sidebar-logo">AutoProf</span>
+        <span class="sidebar-logo">EvoTeam</span>
       </div>
       <nav class="sidebar-nav">
-        <div class="sidebar-nav-section">学习</div>
+        <div class="sidebar-nav-section">核心</div>
         <a class="sidebar-nav-item" :class="{active:activeTab==='report'}" @click="activeTab='report'"><span class="nav-icon">📝</span> 周报</a>
-        <a class="sidebar-nav-item" :class="{active:activeTab==='kanban'}" @click="switchToKanban"><span class="nav-icon">📋</span> 看板</a>
+        <a class="sidebar-nav-item" :class="{active:activeTab==='kanban'}" @click="switchToKanban"><span class="nav-icon">📋</span> 任务</a>
+        <a class="sidebar-nav-item" :class="{active:activeTab==='calendar'}" @click="activeTab='calendar'"><span class="nav-icon">📅</span> 日历</a>
+        <div class="sidebar-nav-section">Agent</div>
+        <a class="sidebar-nav-item" :class="{active:activeTab==='assistant'}" @click="activeTab='assistant'"><span class="nav-icon">🤖</span> AI 助手</a>
         <div class="sidebar-nav-section">科研工具</div>
         <a class="sidebar-nav-item" :class="{active:activeTab==='skills'}" @click="switchToSkills"><span class="nav-icon">🧰</span> 工具箱</a>
         <a class="sidebar-nav-item" :class="{active:activeTab==='interview'}" @click="switchToInterview"><span class="nav-icon">🎯</span> 面试练习</a>
@@ -219,10 +222,20 @@
     </div>
   </div>
 </div>
+  <!-- 日历 Tab (placeholder) -->
+  <div v-if="activeTab==='calendar'" class="empty-state" style="padding:60px">
+    📅 日历功能即将上线<br>
+    <span class="text-muted" style="font-size:12px">查看你的任务截止日期和会议安排</span>
+  </div>
+  <!-- AI 助手 Tab (placeholder) -->
+  <div v-if="activeTab==='assistant'" class="empty-state" style="padding:60px">
+    🤖 AI 助手即将上线<br>
+    <span class="text-muted" style="font-size:12px">与 AI 讨论你的科研问题</span>
+  </div>
     </main>
   </div>
 </div>
-<script src="/js/api.js?v=060"></script>
-<script src="/js/student.js?v=060"></script>
+<script src="/js/api.js?v=070"></script>
+<script src="/js/student.js?v=070"></script>
 </body>
 </html>

@@ -63,7 +63,7 @@ createApp({
     })
 
    // ===== 周报 Tab =====
-    function switchToCockpit() { activeTab.value = 'cockpit' }
+    async function switchToCockpit() { activeTab.value = 'cockpit'; window.location.hash = 'cockpit'; if (students.value.length === 0) await loadStudents() }
 
     async function loadStudents() {
       try {
@@ -262,7 +262,7 @@ createApp({
     // ===== 总览 Dashboard =====
     async function switchToDashboard() {
       activeTab.value = 'dashboard'
-      await loadDashboard()
+      await Promise.all([loadDashboard(), loadTeamFeed()])
     }
 
     async function loadDashboard() {
@@ -301,9 +301,16 @@ createApp({
      user.value = u
      await loadStudents()
      const hash = window.location.hash.slice(1)
-     const validTabs = ['dashboard','cockpit','meeting','kanban','skills','submissions','seating','lesson','workload','invoice','interview','valuecycle','agents','calendar']
+     const validTabs = ['dashboard','todo','notify','projects','cockpit','meeting','kanban','revision','skills','submissions','review','exam','teaching','workload','invoice','interview','valuecycle','agents','calendar']
      if (hash && validTabs.includes(hash)) {
        if (hash === 'dashboard') await switchToDashboard()
+        else if (hash === 'todo') await switchToTodo()
+        else if (hash === 'notify') await switchToNotify()
+        else if (hash === 'projects') await switchToProjects()
+        else if (hash === 'revision') switchToRevision()
+        else if (hash === 'review') switchToReview()
+        else if (hash === 'exam') await switchToSeating()
+        else if (hash === 'teaching') await switchToLesson()
        else if (hash === 'cockpit') switchToCockpit()
        else if (hash === 'meeting') await switchToMeeting()
        else if (hash === 'kanban') await switchToKanban()
@@ -445,7 +452,7 @@ createApp({
      const seatingResult = ref(null)
      const seatingHistory = ref([])
      async function switchToSeating() {
-       activeTab.value = 'seating'
+        activeTab.value = 'exam'; examSubTab.value = 'seating'
        try { const data = await api('/api/seating'); seatingHistory.value = data.seatings || [] } catch (e) { showToast('加载历史失败: ' + e.message) }
      }
      async function generateSeating() {
@@ -475,7 +482,7 @@ createApp({
      const lessonOutputHtml = computed(() => { try { return marked.parse(lessonOutput.value) } catch { return lessonOutput.value } })
      const lessonHistory = ref([])
      async function switchToLesson() {
-       activeTab.value = 'lesson'
+        activeTab.value = 'teaching'; teachingSubTab.value = 'lesson'
        try { const data = await api('/api/lessons'); lessonHistory.value = data.lessons || [] } catch (e) { showToast('加载历史失败: ' + e.message) }
      }
      async function generateLessonPlan() {
@@ -726,23 +733,320 @@ createApp({
         }
       } catch (e) { console.error('addDecision:', e.message) }
     }
-    // --- Agent 面板 ---
-    const agents = ref([
-      { icon: '📝', name: 'AI Summary Agent', role: '周报分析', description: '解析学生双周报，生成总结/风险/建议', capabilities: ['NLP', 'Risk Detection'], status: 'active' },
-      { icon: '🗓️', name: 'Meeting Extractor', role: '会议纪要', description: '从会议纪要抽取决议和行动项，匹配学生', capabilities: ['NLP', 'Name Matching'], status: 'active' },
-      { icon: '🎤', name: 'STT Agent', role: '语音转写', description: '实时会议语音转文字 (FunASR/SenseVoice)', capabilities: ['ASR', 'VAD'], status: 'planned' },
-      { icon: '🧰', name: 'Skill Runner', role: '科研工具', description: '运行 idea-evaluator, paper-polish 等技能', capabilities: ['SSE Streaming'], status: 'active' },
-      { icon: '📈', name: 'Progress Tracker', role: '进度追踪', description: '读取 Codex 历史，辅助生成周报草稿', capabilities: ['CLI Bridge'], status: 'active' },
-      { icon: '🔍', name: 'Review Agent', role: '审稿辅助', description: '论文投稿前审查 (5维度)', capabilities: ['SSE Streaming'], status: 'active' },
-      { icon: '🎯', name: 'Interview Agent', role: '面试/答辩', description: '模拟答辩场景，推荐回答策略', capabilities: ['SSE Streaming'], status: 'active' },
-      { icon: '🔗', name: 'Value Chain Agent', role: '价值链对齐', description: '课题组与学生价值链对齐分析', capabilities: ['Assessment'], status: 'active' },
-      { icon: '📰', name: 'RSS Monitor', role: '每日新闻', description: 'arXiv/IEEE 文献动态推送', capabilities: ['RSS Parser'], status: 'active' },
-      { icon: '📧', name: 'Email Agent', role: '邮箱→看板', description: 'IMAP 读取邮件抽取待办', capabilities: ['IMAP'], status: 'planned' },
-    ])
+   // --- Agent 面板 ---
+   const agents = ref([
+      { id: 'manager', icon: '🧑‍💼', shortName: '大管家', name: '课题组大管家', role: '总管', description: '总览所有学生状态,触发简报生成', gradient: 'linear-gradient(135deg,#667eea,#764ba2)', status: 'active' },
+      { id: 'summary', icon: '📝', shortName: '总结', name: 'AI 总结 Agent', role: '周报分析', description: '解析学生双周报，生成总结/风险/建议', color: 'blue', status: 'active' },
+      { id: 'meeting', icon: '🗓️', shortName: '会议', name: '会议抽取 Agent', role: '会议纪要', description: '从会议纪要抽取决议和行动项', color: 'green', status: 'active' },
+      { id: 'stt', icon: '🎤', shortName: 'STT', name: 'STT Agent', role: '语音转写', description: '实时会议语音转文字', color: 'orange', status: 'idle' },
+      { id: 'skill', icon: '🧰', shortName: '技能', name: 'Skill Runner', role: '科研工具', description: '运行 idea-evaluator, paper-polish 等', color: 'purple', status: 'active' },
+      { id: 'progress', icon: '📈', shortName: '进度', name: 'Progress Tracker', role: '进度追踪', description: '读取 Codex 历史，辅助生成周报草稿', color: 'teal', status: 'active' },
+      { id: 'review', icon: '🔍', shortName: '审稿', name: 'Review Agent', role: '审稿辅助', description: '论文投稿前审查 (5维度)', color: 'red', status: 'idle' },
+      { id: 'interview', icon: '🎯', shortName: '面试', name: 'Interview Agent', role: '面试/答辩', description: '模拟答辩场景，推荐回答策略', color: 'pink', status: 'idle' },
+      { id: 'valuechain', icon: '🔗', shortName: '价值链', name: 'Value Chain Agent', role: '价值链对齐', description: '课题组与学生价值链对齐分析', color: 'indigo', status: 'active' },
+   ])
 
-    function switchToAgents() {
-      activeTab.value = 'agents'
-      window.location.hash = 'agents'
+   function switchToAgents() {
+     activeTab.value = 'agents'
+     window.location.hash = 'agents'
+   }
+
+    // ===== Knowledge Navigator: Agent 对话 =====
+    const activeAgentId = ref(null)
+    const agentChatMessages = ref([])
+    const agentChatInput = ref('')
+    const agentStreaming = ref(false)
+    const agentStreamText = ref('')
+    const activeAgent = computed(() => agents.value.find(a => a.id === activeAgentId.value) || {})
+
+    async function selectAgent(id) {
+      if (activeAgentId.value === id) { activeAgentId.value = null; return }
+      activeAgentId.value = id
+      agentChatMessages.value = []
+      try {
+        const r = await api('/api/agent-chat/' + id)
+        if (r.messages) agentChatMessages.value = r.messages
+        nextTick(() => { const el = document.querySelector('.agent-chat-messages'); if (el) el.scrollTop = el.scrollHeight })
+      } catch {}
+    }
+
+    async function sendAgentChat() {
+      const msg = agentChatInput.value.trim()
+      if (!msg || agentStreaming.value || !activeAgentId.value) return
+      agentChatInput.value = ''
+      agentChatMessages.value.push({ role: 'user', content: msg })
+      agentStreaming.value = true
+      agentStreamText.value = ''
+      try {
+        const resp = await fetch('/api/agent-chat/' + activeAgentId.value, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          credentials: 'include', body: JSON.stringify({ message: msg })
+        })
+        const reader = resp.body.getReader()
+        const dec = new TextDecoder()
+        let buf = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += dec.decode(value, { stream: true })
+          const lines = buf.split('\n')
+          buf = lines.pop()
+          for (const line of lines) {
+            if (line.startsWith('data:')) {
+              const data = line.slice(5).trim()
+              if (data === '[DONE]') break
+              try { agentStreamText.value += JSON.parse(data).content || '' } catch { agentStreamText.value += data }
+            }
+          }
+        }
+        if (agentStreamText.value) agentChatMessages.value.push({ role: 'ai', content: agentStreamText.value })
+      } catch (e) { agentChatMessages.value.push({ role: 'ai', content: '请求失败: ' + e.message }) }
+      agentStreaming.value = false
+      agentStreamText.value = ''
+      nextTick(() => { const el = document.querySelector('.agent-chat-messages'); if (el) el.scrollTop = el.scrollHeight })
+    }
+
+    // ===== 会议 sub-tabs =====
+    const meetingSubTab = ref('minutes')
+
+    // ===== STT (实时转写) =====
+    const sttRecording = ref(false)
+    const sttTranscript = ref('')
+    const sttError = ref('')
+    const sttSummarizing = ref(false)
+    let sttWS = null
+    let sttRecognition = null
+
+    async function startSTT() {
+      sttError.value = ''
+      sttTranscript.value = ''
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        sttRecording.value = true
+        stream.getTracks().forEach(t => t.stop())
+        // 尝试 WebSocket (FunASR)，降级到 Web Speech API
+        try {
+          sttWS = new WebSocket((location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + location.host + '/api/stt')
+          sttWS.onmessage = (ev) => { if (ev.data) sttTranscript.value += ev.data }
+          sttWS.onerror = () => { sttError.value = 'FunASR 未连接，使用浏览器语音识别'; fallbackWebSpeech() }
+        } catch { fallbackWebSpeech() }
+      } catch (e) { sttError.value = '麦克风访问失败: ' + e.message }
+    }
+
+    function fallbackWebSpeech() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+      if (!SR) { sttError.value = '浏览器不支持语音识别，请用 Chrome/Edge'; return }
+      sttRecognition = new SR()
+      sttRecognition.continuous = true
+      sttRecognition.interimResults = true
+      sttRecognition.lang = 'zh-CN'
+      sttRecognition.onresult = (ev) => {
+        let txt = ''
+        for (let i = 0; i < ev.results.length; i++) txt += ev.results[i][0].transcript
+        sttTranscript.value = txt
+      }
+      sttRecognition.onerror = (e) => { sttError.value = '语音识别错误: ' + e.error }
+      sttRecognition.start()
+    }
+
+    function stopSTT() {
+      sttRecording.value = false
+      if (sttWS) { try { sttWS.close() } catch {} sttWS = null }
+      if (sttRecognition) { try { sttRecognition.stop() } catch {} sttRecognition = null }
+    }
+
+    async function sttSummarize() {
+      if (!sttTranscript.value) return
+      sttSummarizing.value = true
+      try {
+        const r = await fetch('/api/meeting/upload', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ date: new Date().toISOString().slice(0, 10), content: sttTranscript.value })
+        })
+        const d = await r.json()
+        if (d.ok) { showToast('已上传会议纪要并触发 AI 解析,切换到"组会"子页查看结果'); meetingSubTab.value = 'minutes'; await loadMeetings() }
+      } catch (e) { showToast('总结失败: ' + e.message) }
+      sttSummarizing.value = false
+    }
+
+    // ===== ToDo =====
+    const todoItems = ref([])
+    const newTodoText = ref('')
+    const newTodoPriority = ref('medium')
+    const todoCount = computed(() => todoItems.value.filter(t => t.status !== 'done').length)
+
+    async function switchToTodo() {
+      activeTab.value = 'todo'; window.location.hash = 'todo'
+      await loadTodo()
+    }
+    async function loadTodo() {
+      try {
+        const data = await api('/api/tasks?status=todo,in_progress')
+        todoItems.value = data.tasks || []
+      } catch { todoItems.value = [] }
+    }
+    async function addTodo() {
+      if (!newTodoText.value.trim()) return
+      try {
+        await api('/api/tasks', 'POST', { title: newTodoText.value, priority: newTodoPriority.value, source: 'manual' })
+        newTodoText.value = ''
+        await loadTodo()
+      } catch (e) { showToast('添加失败: ' + e.message) }
+    }
+    async function toggleTodo(t) {
+      const newStatus = t.status === 'done' ? 'todo' : 'done'
+      await api('/api/tasks/' + t.task_id, 'PUT', { status: newStatus })
+      await loadTodo()
+    }
+
+    // ===== 通知 =====
+    const emails = ref([])
+    const emailSyncing = ref(false)
+    const unreadCount = computed(() => emails.value.length)
+    async function switchToNotify() {
+      activeTab.value = 'notify'; window.location.hash = 'notify'
+      await loadEmails()
+    }
+    async function loadEmails() {
+      try { const d = await api('/api/email/unread'); emails.value = d.emails || [] } catch { emails.value = [] }
+    }
+    async function syncEmail() {
+      emailSyncing.value = true
+      try { await api('/api/email/sync', 'POST'); await loadEmails(); showToast('邮件同步完成') }
+      catch (e) { showToast('同步失败: ' + e.message) }
+      emailSyncing.value = false
+    }
+
+    // ===== 项目管理 =====
+    const projectList = ref([])
+    async function switchToProjects() {
+      activeTab.value = 'projects'; window.location.hash = 'projects'
+      await loadProjects()
+    }
+    async function loadProjects() {
+      try {
+        const d = await api('/api/dashboard')
+        const map = {}
+        for (const s of (d.students || [])) {
+          const proj = s.project || '未分类'
+          if (!map[proj]) map[proj] = { name: proj, members: [], tasks: [], expanded: false }
+          map[proj].members.push({ id: s.id, name: s.name })
+        }
+        const tasks = await api('/api/tasks')
+        for (const t of (tasks.tasks || [])) {
+          const student = (d.students || []).find(s => s.id === t.owner_student_id)
+          const proj = student?.project || '未分类'
+          if (map[proj]) map[proj].tasks.push(t)
+        }
+        projectList.value = Object.values(map).map(p => ({ ...p, taskCount: p.tasks.length }))
+      } catch (e) { projectList.value = [] }
+    }
+
+    // ===== 修改 (论文/专利/报告) =====
+    const revisionMessages = ref([])
+    const revisionInput = ref('')
+    const revisionStreaming = ref(false)
+    const revisionStreamText = ref('')
+    const revisionDoc = ref('')
+    function switchToRevision() { activeTab.value = 'revision'; window.location.hash = 'revision' }
+    async function sendRevisionChat() {
+      const msg = revisionInput.value.trim()
+      if (!msg || revisionStreaming.value) return
+      revisionInput.value = ''
+      const ctx = revisionDoc.value.slice(0, 4000)
+      revisionMessages.value.push({ role: 'user', content: msg })
+      revisionStreaming.value = true
+      revisionStreamText.value = ''
+      try {
+        const resp = await fetch('/api/skills/paper-polish', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          credentials: 'include', body: JSON.stringify({ input: msg + '\n\n--- 文档内容 ---\n' + ctx })
+        })
+        const reader = resp.body.getReader()
+        const dec = new TextDecoder()
+        let buf = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += dec.decode(value, { stream: true })
+          const lines = buf.split('\n'); buf = lines.pop()
+          for (const line of lines) {
+            if (line.startsWith('data:')) {
+              const data = line.slice(5).trim()
+              if (data === '[DONE]') break
+              try { revisionStreamText.value += JSON.parse(data).content || '' } catch { revisionStreamText.value += data }
+            }
+          }
+        }
+        if (revisionStreamText.value) revisionMessages.value.push({ role: 'ai', content: revisionStreamText.value })
+      } catch (e) { revisionMessages.value.push({ role: 'ai', content: '请求失败: ' + e.message }) }
+      revisionStreaming.value = false
+      revisionStreamText.value = ''
+    }
+
+    // ===== 审稿 =====
+    const reviewInput = ref('')
+    const reviewStreaming = ref(false)
+    const reviewStreamText = ref('')
+    const reviewOutput = computed(() => reviewStreamText.value)
+    const reviewOutputHtml = computed(() => { try { return marked.parse(reviewOutput.value) } catch { return reviewOutput.value } })
+    function switchToReview() { activeTab.value = 'review'; window.location.hash = 'review' }
+    async function runReview() {
+      if (!reviewInput.value.trim() || reviewStreaming.value) return
+      reviewStreaming.value = true
+      reviewStreamText.value = ''
+      try {
+        const resp = await fetch('/api/skills/pre-submission-reviewer', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          credentials: 'include', body: JSON.stringify({ input: reviewInput.value })
+        })
+        const reader = resp.body.getReader()
+        const dec = new TextDecoder()
+        let buf = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += dec.decode(value, { stream: true })
+          const lines = buf.split('\n'); buf = lines.pop()
+          for (const line of lines) {
+            if (line.startsWith('data:')) {
+              const data = line.slice(5).trim()
+              if (data === '[DONE]') break
+              try { reviewStreamText.value += JSON.parse(data).content || '' } catch { reviewStreamText.value += data }
+            }
+          }
+        }
+      } catch (e) { reviewStreamText.value = '请求失败: ' + e.message }
+      reviewStreaming.value = false
+    }
+
+    // ===== 考试/教学 sub-tabs =====
+    const examSubTab = ref('seating')
+    const teachingSubTab = ref('lesson')
+    const examSubTabLabel = computed(() => ({ scoring: '登分', obe: 'OBE', invigilation: '监考', question: '出题' }[examSubTab.value] || ''))
+    const teachingSubTabLabel = computed(() => ({ learning: '学情', questionbank: '题库', experience: '经验' }[teachingSubTab.value] || ''))
+    function switchToExam() { activeTab.value = 'exam'; window.location.hash = 'exam'; switchToSeating() }
+    function switchToTeaching() { activeTab.value = 'teaching'; window.location.hash = 'teaching'; switchToLesson() }
+
+    // ===== 团队动态 feed =====
+    const teamFeed = ref([])
+    const todayMeetings = ref(0)
+    const overdueCount = computed(() => dashboardData.value?.stats?.overdue_tasks || 0)
+    async function loadTeamFeed() {
+      const feed = []
+      try {
+        const d = await api('/api/dashboard')
+        for (const s of (d.students || [])) {
+          if (s.report_submitted) feed.push({ time: s.report_date || '', icon: '📝', text: s.name + ' 提交了周报' })
+          if (s.overdue_tasks > 0) feed.push({ time: '', icon: '⚠', text: s.name + ' 有 ' + s.overdue_tasks + ' 个逾期任务' })
+        }
+      } catch {}
+      try {
+        const m = await api('/api/meeting')
+        for (const mt of (m.meetings || []).slice(0, 3)) feed.push({ time: mt.date, icon: '🗓️', text: '会议 ' + mt.date })
+      } catch {}
+      teamFeed.value = feed.slice(0, 15)
     }
 
     // --- 日历 ---
@@ -854,6 +1158,30 @@ createApp({
       switchToInterview, startInterview, sendInterviewAnswer, sendInterviewCoach,
       // Agent + Calendar
       agents, switchToAgents,
+      // Knowledge Navigator
+      activeAgentId, agentChatMessages, agentChatInput, agentStreaming, agentStreamText,
+      activeAgent, selectAgent, sendAgentChat,
+      // 会议 sub-tabs + STT
+      meetingSubTab, sttRecording, sttTranscript, sttError, sttSummarizing,
+      startSTT, stopSTT, sttSummarize,
+      // ToDo
+      todoItems, newTodoText, newTodoPriority, todoCount,
+      switchToTodo, addTodo, toggleTodo,
+      // 通知
+      emails, emailSyncing, unreadCount, switchToNotify, syncEmail,
+      // 项目管理
+      projectList, switchToProjects,
+      // 修改
+      revisionMessages, revisionInput, revisionStreaming, revisionStreamText,
+      revisionDoc, switchToRevision, sendRevisionChat,
+      // 审稿
+      reviewInput, reviewStreaming, reviewStreamText,
+      reviewOutput, reviewOutputHtml, switchToReview, runReview,
+      // 考试/教学 sub-tabs
+      examSubTab, teachingSubTab, examSubTabLabel, teachingSubTabLabel,
+      switchToExam, switchToTeaching,
+      // 团队动态
+      teamFeed, todayMeetings, overdueCount,
       calendarMonth, calendarWeekdays, calendarEvents, calendarDays, calendarLabel,
       switchToCalendar, prevMonth, nextMonth,
     }

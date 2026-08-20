@@ -1,16 +1,21 @@
-const { createApp, ref } = Vue
+const { createApp, ref, computed } = Vue
 
 createApp({
   setup() {
-    const role = ref('grad')
+    const selectedRole = ref(null)
     const userId = ref('')
     const password = ref('')
     const loading = ref(false)
     const error = ref('')
 
+    function selectRole(role) {
+      selectedRole.value = role
+      error.value = ''
+    }
+
     async function doLogin() {
       if (!userId.value || !password.value) {
-        error.value = 'Please enter ID and password'
+        error.value = '请输入 ID 和密码'
         return
       }
       loading.value = true
@@ -18,10 +23,7 @@ createApp({
       try {
         const data = await api('/api/login', {
           method: 'POST',
-          body: JSON.stringify({
-            student_id: userId.value,
-            password: password.value,
-          }),
+          body: JSON.stringify({ student_id: userId.value, password: password.value }),
         })
         if (data.ok) {
           window.location.href = data.redirect
@@ -33,6 +35,6 @@ createApp({
       }
     }
 
-    return { role, userId, password, loading, error, doLogin }
+    return { selectedRole, selectRole, userId, password, loading, error, doLogin }
   },
 }).mount('#app')

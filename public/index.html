@@ -3,52 +3,60 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AutoProf - Login</title>
-<link rel="stylesheet" href="/css/app.css?v=053">
+<title>EvoTeam - 课题组 AI 原生工作台</title>
+<link rel="stylesheet" href="/css/app.css?v=070">
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 </head>
 <body>
 <div id="app">
-  <div class="login-wrapper">
-    <div class="login-card fade-in">
-      <div class="login-logo">
-        <h1>AutoProf</h1>
-        <p>Lab Brief System</p>
-      </div>
+  <div class="welcome-wrapper">
+    <div class="welcome-logo">
+      <h1 class="evoteam-title">EvoTeam</h1>
+      <p class="evoteam-subtitle">课题组 AI 原生工作台</p>
+    </div>
 
-      <div class="role-selector">
-        <button class="role-btn" :class="{active: role==='undergrad'}" @click="role='undergrad'">
-          Undergrad
-        </button>
-        <button class="role-btn" :class="{active: role==='grad'}" @click="role='grad'">
-          Grad
-        </button>
-        <button class="role-btn" :class="{active: role==='teacher'}" @click="role='teacher'">
-          Teacher
-        </button>
+    <div class="welcome-cards">
+      <div class="welcome-card" :class="{selected: selectedRole==='undergrad'}" @click="selectRole('undergrad')">
+        <div class="welcome-card-icon grad-icon">🎓</div>
+        <div class="welcome-card-name">AutoUngrad</div>
+        <div class="welcome-card-desc">本科课堂<br>学习 · 作业 · 考试</div>
+        <div class="welcome-card-enter" v-if="selectedRole==='undergrad'">▼</div>
       </div>
+      <div class="welcome-card" :class="{selected: selectedRole==='grad'}" @click="selectRole('grad')">
+        <div class="welcome-card-icon research-icon">🔬</div>
+        <div class="welcome-card-name">AutoGrad</div>
+        <div class="welcome-card-desc">研究生科研<br>周报 · 任务 · 项目</div>
+        <div class="welcome-card-enter" v-if="selectedRole==='grad'">▼</div>
+      </div>
+      <div class="welcome-card" :class="{selected: selectedRole==='teacher'}" @click="selectRole('teacher')">
+        <div class="welcome-card-icon prof-icon">👨‍🏫</div>
+        <div class="welcome-card-name">AutoProf</div>
+        <div class="welcome-card-desc">导师驾驶舱<br>总览 · 决策 · 调度</div>
+        <div class="welcome-card-enter" v-if="selectedRole==='teacher'">▼</div>
+      </div>
+    </div>
 
+    <transition name="slide-down">
+    <div class="welcome-login-form" v-if="selectedRole">
       <div class="form-group">
         <label class="form-label">ID</label>
         <input class="form-input" v-model="userId" placeholder="s01, t01..." @keydown.enter="doLogin">
       </div>
-
       <div class="form-group">
-        <label class="form-label">Password</label>
+        <label class="form-label">密码</label>
         <input class="form-input" type="password" v-model="password" placeholder="Password" @keydown.enter="doLogin">
       </div>
-
       <button class="btn btn-primary" style="width:100%" :disabled="loading" @click="doLogin">
-        {{ loading ? 'Logging in...' : 'Login' }}
+        {{ loading ? '登录中...' : '登录' }}
       </button>
-
       <p v-if="error" class="text-center" style="color:var(--danger); margin-top:12px; font-size:13px">{{ error }}</p>
     </div>
+    </transition>
   </div>
 </div>
-<script src="/js/api.js?v=053"></script>
-<div class="version-badge" id="ver-badge" style="text-align:center;color:#999;font-size:12px;margin-top:8px">AutoProf LabOS</div>
-<script>fetch('/api/version').then(r=>r.json()).then(d=>{const el=document.getElementById('ver-badge');if(el)el.textContent='AutoProf LabOS v'+d.version}).catch(()=>{})</script>
-<script src="/js/login.js?v=053"></script>
+<div class="version-badge" id="ver-badge" style="text-align:center;color:#999;font-size:12px;margin-top:24px">EvoTeam</div>
+<script>fetch('/api/version').then(r=>r.json()).then(d=>{const el=document.getElementById('ver-badge');if(el)el.textContent='EvoTeam v'+d.version}).catch(()=>{})</script>
+<script src="/js/api.js?v=070"></script>
+<script src="/js/login.js?v=070"></script>
 </body>
 </html>

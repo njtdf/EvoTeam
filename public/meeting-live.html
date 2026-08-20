@@ -3,30 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AutoProf - 实时会议</title>
-<link rel="stylesheet" href="/css/app.css?v=060">
+<title>EvoTeam - 实时会议</title>
+<link rel="stylesheet" href="/css/app.css?v=070">
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
 <div id="app">
   <div class="app-header">
-    <span class="title">AutoProf Lab Cockpit</span>
-    <div class="tab-bar">
-     <a class="tab-btn" href="/teacher" style="text-decoration:none">总览</a>
-      <a class="tab-btn" href="/teacher#cockpit" style="text-decoration:none">周报</a>
-      <a class="tab-btn" href="/teacher#meeting" style="text-decoration:none">会议</a>
-      <a class="tab-btn" href="/teacher#kanban" style="text-decoration:none">看板</a>
-      <a class="tab-btn active" href="/meeting-live" style="text-decoration:none">实时会议</a>
-      <a class="tab-btn" href="/teacher#skills" style="text-decoration:none">工具箱</a>
-      <a class="tab-btn" href="/teacher#submissions" style="text-decoration:none">投稿</a>
-      <a class="tab-btn" href="/teacher#seating" style="text-decoration:none">排座</a>
-      <a class="tab-btn" href="/teacher#lesson" style="text-decoration:none">备课</a>
-      <a class="tab-btn" href="/teacher#workload" style="text-decoration:none">工作量</a>
-      <a class="tab-btn" href="/teacher#invoice" style="text-decoration:none">记账</a>
-      <a class="tab-btn" href="/teacher#interview" style="text-decoration:none">面试</a>
-      <a class="tab-btn" href="/teacher#valuecycle" style="text-decoration:none">价值链</a>
-    </div>
+    <span class="title">EvoTeam · 实时会议</span>
+    <a class="btn btn-secondary btn-sm" href="/teacher#meeting" style="text-decoration:none;margin-left:12px">← 返回工作台</a>
     <span class="spacer"></span>
     <span class="live-status">{{ statusText }}</span>
     <button class="header-btn" @click="logout">退出</button>
