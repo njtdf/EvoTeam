@@ -8,7 +8,7 @@
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<link rel="stylesheet" href="/css/app.css?v=075">
+<link rel="stylesheet" href="/css/app.css?v=076">
 </head>
 <body>
 <div id="app">
@@ -25,6 +25,7 @@
         <a class="sidebar-nav-item" :class="{active:activeTab==='calendar'}" @click="switchToCalendar"><span class="nav-icon">📅</span> 日历</a>
         <a class="sidebar-nav-item" :class="{active:activeTab==='projects'}" @click="switchToProjects"><span class="nav-icon">📁</span> 项目管理</a>
         <a class="sidebar-nav-item" :class="{active:activeTab==='valuecycle'}" @click="switchToValueCycle"><span class="nav-icon">🔗</span> 价值链</a>
+        <a class="sidebar-nav-item" :class="{active:activeTab==='knowledge'}" @click="switchToKnowledge"><span class="nav-icon">📖</span> 知识库</a>
         <div class="sidebar-nav-section">学生管理</div>
         <a class="sidebar-nav-item" :class="{active:activeTab==='cockpit'}" @click="switchToCockpit"><span class="nav-icon">📝</span> 周报</a>
         <a class="sidebar-nav-item" :class="{active:activeTab==='meeting'}" @click="switchToMeeting"><span class="nav-icon">🗓️</span> 会议</a>
@@ -1142,13 +1143,79 @@
   </div>
 
   <!-- 考试/教学 sub-tab placeholder views handled in exam/teaching tabs above -->
- </main>
+ 
+  <!-- 知识库 Tab -->
+  <div v-if="activeTab==='knowledge'" class="knowledge-view" style="padding:16px">
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px">
+      <h2 style="margin:0; font-size:20px">📖 课题组知识库</h2>
+      <span class="spacer" style="flex:1"></span>
+      <button class="btn btn-secondary btn-sm" @click="rebuildKbIndex" :disabled="kbRebuilding">
+        {{ kbRebuilding ? '索引重建中...' : '🔄 重建索引' }}
+      </button>
+    </div>
+    <div class="kb-stats-grid" v-if="kbStats">
+      <div class="kb-stat-card">
+        <div class="kb-stat-num">{{ kbStats.total_docs || 0 }}</div>
+        <div class="kb-stat-label">总文档</div>
+      </div>
+      <div class="kb-stat-card">
+        <div class="kb-stat-num">{{ kbStats.total_keywords || 0 }}</div>
+        <div class="kb-stat-label">关键词索引</div>
+      </div>
+      <div class="kb-stat-card" v-for="cat in (kbStats.by_category || [])" :key="cat.category">
+        <div class="kb-stat-num">{{ cat.c }}</div>
+        <div class="kb-stat-label">{{ cat.category }}</div>
+      </div>
+    </div>
+    <div class="kb-search-bar" style="margin-top:16px">
+      <input class="form-input" v-model="kbSearchQuery" placeholder="输入关键词搜索 (TF-IDF 语义匹配)..." style="flex:1" @keyup.enter="searchKb">
+      <button class="btn btn-primary btn-sm" @click="searchKb" :disabled="kbSemLoading">{{ kbSemLoading ? '搜索中...' : '🔍 搜索' }}</button>
+      <button class="btn btn-secondary btn-sm" @click="kbShowDocs = !kbShowDocs">{{ kbShowDocs ? '隐藏文档列表' : '查看全部文档' }}</button>
+    </div>
+    <div v-if="kbSemLoading" class="loading" style="padding:20px">搜索中...</div>
+    <div v-else-if="kbSearchResults && kbSearchResults.length > 0" class="kb-search-results">
+      <div class="kb-search-header">搜索结果 ({{ kbSearchResults.length }} 条)</div>
+      <div class="kb-result-item" v-for="(r, idx) in kbSearchResults" :key="idx" @click="viewKbFile(r.path)">
+        <div class="kb-result-header"><span class="kb-result-icon">📄</span><span class="kb-result-title">{{ r.title }}</span><span class="kb-result-score">{{ r.score.toFixed(4) }}</span></div>
+        <div class="kb-result-snippet">{{ r.snippet }}</div>
+        <div class="kb-result-path">{{ r.path }}</div>
+      </div>
+    </div>
+    <div v-else-if="kbSearchQuery && !kbSemLoading && kbSearchResults && kbSearchResults.length === 0" class="empty-state" style="padding:20px">无匹配结果</div>
+    <div v-if="kbShowDocs" style="margin-top:20px">
+      <div class="card-title" style="margin-bottom:8px">全部文档 ({{ kbPage }} / {{ kbTotalPages }})</div>
+      <table class="data-table" v-if="kbDocuments.length > 0">
+        <thead><tr><th>ID</th><th>标题</th><th>路径</th><th>类别</th><th>学生</th></tr></thead>
+        <tbody>
+          <tr v-for="d in kbDocuments" :key="d.id" @click="viewKbFile(d.path)" style="cursor:pointer">
+            <td class="mono">{{ d.id }}</td><td>{{ d.title }}</td>
+            <td class="text-muted" style="font-size:11px; max-width:300px; overflow:hidden; text-overflow:ellipsis">{{ d.path }}</td>
+            <td><span class="tag">{{ d.category }}</span></td><td>{{ d.student_id || '-' }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div v-else class="empty-state" style="padding:16px">暂无文档</div>
+      <div style="display:flex; gap:8px; margin-top:8px" v-if="kbTotalPages > 1">
+        <button class="btn btn-secondary btn-sm" @click="kbPrevPage" :disabled="kbPage <= 1">上一页</button>
+        <span style="padding:4px 8px">{{ kbPage }} / {{ kbTotalPages }}</span>
+        <button class="btn btn-secondary btn-sm" @click="kbNextPage" :disabled="kbPage >= kbTotalPages">下一页</button>
+      </div>
+    </div>
+    <div v-if="kbViewingFile" class="modal-overlay" @click.self="kbViewingFile=null">
+      <div class="modal-box" style="max-width:800px; max-height:80vh; overflow-y:auto">
+        <div class="modal-header"><span class="modal-title">📄 {{ kbViewingFileName }}</span><button class="btn btn-sm" @click="kbViewingFile=null">✕</button></div>
+        <pre style="padding:16px; white-space:pre-wrap; font-size:13px; line-height:1.6">{{ kbFileContent }}</pre>
+      </div>
+    </div>
+  </div>
+
+</main>
    </div>
  </div>
 
 
 
-<script src="/js/api.js?v=075"></script>
-<script src="/js/teacher.js?v=075"></script>
+<script src="/js/api.js?v=076"></script>
+<script src="/js/teacher.js?v=076"></script>
 </body>
 </html>

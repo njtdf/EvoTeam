@@ -302,7 +302,7 @@ createApp({
      user.value = u
      await loadStudents()
      const hash = window.location.hash.slice(1)
-     const validTabs = ['dashboard','todo','notify','projects','cockpit','meeting','kanban','revision','skills','submissions','review','exam','teaching','workload','invoice','interview','valuecycle','agents','calendar']
+     const validTabs = ['dashboard','todo','notify','projects','cockpit','meeting','kanban','revision','skills','submissions','review','exam','teaching','workload','invoice','interview','valuecycle','agents','calendar','knowledge']
      if (hash && validTabs.includes(hash)) {
        if (hash === 'dashboard') await switchToDashboard()
         else if (hash === 'todo') await switchToTodo()
@@ -325,6 +325,7 @@ createApp({
         else if (hash === 'agents') switchToAgents()
         else if (hash === 'calendar') await switchToCalendar()
        else if (hash === 'valuecycle') await switchToValueCycle()
+      else if (hash === 'knowledge') await switchToKnowledge()
      } else {
        await switchToDashboard()
      }
@@ -1199,6 +1200,46 @@ createApp({
   }
 
 
+
+  // ===== 知识库 (TF-IDF) =====
+  const kbSearchQuery = ref('')
+  const kbSearchResults = ref([])
+  const kbSemLoading = ref(false)
+  const kbStats = ref(null)
+  const kbDocuments = ref([])
+  const kbPage = ref(1)
+  const kbPerPage = ref(20)
+  const kbTotalDocs = ref(0)
+  const kbTotalPages = computed(() => Math.ceil(kbTotalDocs.value / kbPerPage.value) || 1)
+  const kbShowDocs = ref(false)
+  const kbRebuilding = ref(false)
+
+  async function switchToKnowledge() {
+    activeTab.value = 'knowledge'
+    await loadKbStats()
+    await loadKbDocuments()
+  }
+  async function loadKbStats() {
+    try { const r = await api('/api/kb/stats'); kbStats.value = r } catch(e) { console.error('KB stats:', e) }
+  }
+  async function loadKbDocuments() {
+    try { const r = await api('/api/kb/documents?page=' + kbPage.value + '&per_page=' + kbPerPage.value); kbDocuments.value = r.documents || []; kbTotalDocs.value = r.total || 0 } catch(e) { console.error('KB docs:', e) }
+  }
+  async function searchKb() {
+    const q = kbSearchQuery.value.trim()
+    if (!q) { kbSearchResults.value = []; return }
+    kbSemLoading.value = true
+    try { const r = await api('/api/kb/search?q=' + encodeURIComponent(q) + '&limit=20'); kbSearchResults.value = r.results || [] } catch(e) { showToast('搜索失败: ' + e.message) }
+    kbSemLoading.value = false
+  }
+  async function rebuildKbIndex() {
+    kbRebuilding.value = true
+    try { const r = await api('/api/kb/index', { method: 'POST' }); showToast('重建完成: ' + (r.indexed?.docs||0) + ' docs'); await loadKbStats(); await loadKbDocuments() } catch(e) { showToast('重建失败') }
+    kbRebuilding.value = false
+  }
+  function kbNextPage() { if (kbPage.value < kbTotalPages.value) { kbPage.value++; loadKbDocuments() } }
+  function kbPrevPage() { if (kbPage.value > 1) { kbPage.value--; loadKbDocuments() } }
+
 return {
       user, students, selectedStudentId, report, summary, chatMessages,
       // 价值链
@@ -1278,6 +1319,11 @@ return {
       teamFeed, todayMeetings, overdueCount,
       calendarMonth, calendarWeekdays, calendarEvents, calendarDays, calendarLabel,
       switchToCalendar, prevMonth, nextMonth,
+      // 知识库
+      kbSearchQuery, kbSearchResults, kbSemLoading, kbStats, kbDocuments,
+      kbPage, kbTotalPages, kbShowDocs, kbRebuilding,
+      switchToKnowledge, loadKbStats, loadKbDocuments, searchKb, rebuildKbIndex,
+      kbNextPage, kbPrevPage,
     }
   },
 }).mount('#app')

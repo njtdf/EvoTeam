@@ -321,6 +321,11 @@ status: "on_track"
     const kbViewingFile = ref(null)
     const kbViewingFileName = ref('')
     const kbFileContent = ref('')
+    // TF-IDF search refs
+    const kbSemQuery = ref('')
+    const kbSemResults = ref([])
+    const kbSemLoading = ref(false)
+    const kbSemStats = ref(null)
 
     const kbFilteredFiles = computed(() => {
       if (!kbSearch.value) return kbFiles.value
@@ -333,6 +338,7 @@ status: "on_track"
     async function switchToKb() {
       activeTab.value = 'kb'
       await loadKb()
+      await loadKbStats()
     }
 
     async function loadKb() {
@@ -353,6 +359,25 @@ status: "on_track"
         const d = await r.json()
         kbFileContent.value = d.content || d.error || '无内容'
       } catch (e) { kbFileContent.value = '加载失败: ' + e.message }
+    }
+
+    // TF-IDF semantic search
+    async function semSearchKb() {
+      const q = kbSemQuery.value.trim()
+      if (!q) { kbSemResults.value = []; return }
+      kbSemLoading.value = true
+      try {
+        const r = await api('/api/kb/search?q=' + encodeURIComponent(q) + '&limit=20')
+        kbSemResults.value = r.results || []
+      } catch(e) { showToast('搜索失败: ' + e.message) }
+      kbSemLoading.value = false
+    }
+
+    async function loadKbStats() {
+      try {
+        const r = await api('/api/kb/stats')
+        kbSemStats.value = r
+      } catch(e) { console.error('KB stats:', e) }
     }
 
    onMounted(async () => {
@@ -602,7 +627,7 @@ status: "on_track"
       sendAssistantMessage, switchToAssistant, mySummary, myReportHtml,
       // 知识库
       kbFiles, kbSearch, kbLoading, kbFilteredFiles,
-      kbViewingFile, kbViewingFileName, kbFileContent,
+      kbViewingFile, kbViewingFileName, kbFileContent, kbSemQuery, kbSemResults, kbSemLoading, kbSemStats, semSearchKb, loadKbStats,
       loadKb, viewKbFile, switchToKb,
     }
   },

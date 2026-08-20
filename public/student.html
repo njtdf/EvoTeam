@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EvoTeam - Student</title>
-<link rel="stylesheet" href="/css/app.css?v=075">
+<link rel="stylesheet" href="/css/app.css?v=076">
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -20,11 +20,11 @@
         <a class="sidebar-nav-item" :class="{active:activeTab==='report'}" @click="activeTab='report'"><span class="nav-icon">📝</span> 周报</a>
         <a class="sidebar-nav-item" :class="{active:activeTab==='kanban'}" @click="switchToKanban"><span class="nav-icon">📋</span> 任务</a>
         <a class="sidebar-nav-item" :class="{active:activeTab==='calendar'}" @click="switchToCalendar"><span class="nav-icon">📅</span> 日历</a>
+        <a class="sidebar-nav-item" :class="{active:activeTab==='kb'}" @click="switchToKb"><span class="nav-icon">📚</span> 知识库</a>
         <div class="sidebar-nav-section">Agent</div>
         <a class="sidebar-nav-item" :class="{active:activeTab==='assistant'}" @click="switchToAssistant"><span class="nav-icon">🤖</span> AI 助手</a>
         <div class="sidebar-nav-section">科研工具</div>
-        <a class="sidebar-nav-item" :class="{active:activeTab==='kb'}" @click="switchToKb"><span class="nav-icon">📚</span> 知识库</a>
-        <a class="sidebar-nav-item" :class="{active:activeTab==='skills'}" @click="switchToSkills"><span class="nav-icon">🧰</span> 工具箱</a>
+                <a class="sidebar-nav-item" :class="{active:activeTab==='skills'}" @click="switchToSkills"><span class="nav-icon">🧰</span> 工具箱</a>
         <a class="sidebar-nav-item" :class="{active:activeTab==='interview'}" @click="switchToInterview"><span class="nav-icon">🎯</span> 面试练习</a>
       </nav>
       <div class="sidebar-footer">
@@ -180,9 +180,31 @@
   </div>
 
   <!-- 知识库 Tab -->
-  <div v-if="activeTab==='kb'" class="kb-view" style="padding:12px">
+  <div v-if="activeTab==='kb'" class="knowledge-view" style="padding:12px">
+    <!-- TF-IDF Semantic Search -->
+    <div class="kb-search-bar" style="margin-bottom:12px">
+      <input class="form-input" v-model="kbSemQuery" placeholder="语义搜索 (TF-IDF)..." style="flex:1" @keyup.enter="semSearchKb">
+      <button class="btn btn-primary btn-sm" @click="semSearchKb" :disabled="kbSemLoading">{{ kbSemLoading ? "搜索中..." : "🔍 搜索" }}</button>
+    </div>
+    <div v-if="kbSemResults && kbSemResults.length > 0" style="margin-bottom:16px">
+      <div class="kb-search-header">搜索结果 ({{ kbSemResults.length }} 条)</div>
+      <div class="kb-result-item" v-for="(r, idx) in kbSemResults" :key="idx" @click="viewKbFile(r.path)">
+        <div class="kb-result-header"><span class="kb-result-icon">📄</span><span class="kb-result-title">{{ r.title }}</span><span class="kb-result-score">{{ r.score.toFixed(4) }}</span></div>
+        <div class="kb-result-snippet">{{ r.snippet }}</div>
+        <div class="kb-result-path">{{ r.path }}</div>
+      </div>
+    </div>
+    <div v-else-if="kbSemQuery && !kbSemLoading && kbSemResults && kbSemResults.length === 0" class="empty-state" style="padding:12px">无匹配结果</div>
+
+    <!-- Stats -->
+    <div class="kb-stats-grid" v-if="kbSemStats" style="margin-bottom:12px">
+      <div class="kb-stat-card"><div class="kb-stat-num">{{ kbSemStats.total_docs || 0 }}</div><div class="kb-stat-label">总文档</div></div>
+      <div class="kb-stat-card"><div class="kb-stat-num">{{ kbSemStats.total_keywords || 0 }}</div><div class="kb-stat-label">关键词</div></div>
+    </div>
+
+    <!-- File Browser -->
     <div style="display:flex; gap:8px; margin-bottom:12px">
-      <input class="kb-search form-input" v-model="kbSearch" placeholder="搜索文件..." style="flex:1">
+      <input class="form-input" v-model="kbSearch" placeholder="文件名搜索..." style="flex:1">
       <button class="btn btn-secondary btn-sm" @click="loadKb">🔄 刷新</button>
     </div>
     <div v-if="kbLoading" class="loading">加载中...</div>
@@ -307,7 +329,7 @@
     </main>
   </div>
 </div>
-<script src="/js/api.js?v=075"></script>
-<script src="/js/student.js?v=075"></script>
+<script src="/js/api.js?v=076"></script>
+<script src="/js/student.js?v=076"></script>
 </body>
 </html>
