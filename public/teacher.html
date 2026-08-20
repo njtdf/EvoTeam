@@ -8,7 +8,7 @@
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<link rel="stylesheet" href="/css/app.css?v=076">
+<link rel="stylesheet" href="/css/app.css?v=077">
 </head>
 <body>
 <div id="app">
@@ -50,106 +50,102 @@
       </div>
     </aside>
     <main class="main-content">
-  <!-- 总览: Knowledge Navigator -->
+  <!-- 总览: Welcome + Knowledge Navigator -->
   <div v-if="activeTab==='dashboard'" class="kn-view">
-    <!-- 今日概览条 -->
-    <div class="kn-summary-bar">
-      <span class="stat-pill">✅ {{ todoCount }} 待办</span>
-      <span class="stat-pill">🔔 {{ unreadCount }} 未读</span>
-      <span class="stat-pill">🗓️ {{ todayMeetings }} 会议</span>
-      <span class="stat-pill stat-overdue" v-if="overdueCount > 0">⚠ {{ overdueCount }} 逾期</span>
-      <span class="stat-pill">👥 {{ dashboardData?.stats?.total || 0 }} 学生</span>
-      <span class="stat-pill" :class="{missing: (dashboardData?.stats?.missing||0) > 0}">❌ {{ dashboardData?.stats?.missing || 0 }} 未交周报</span>
-    </div>
-
-    <!-- Agent 网格 -->
-    <div class="kn-section-label">Agent 团队 — 点击对话</div>
-    <div class="agent-grid">
-      <div v-for="a in agents" :key="a.id"
-           class="agent-avatar-card" :class="{selected: activeAgentId===a.id}"
-           @click="selectAgent(a.id)">
-        <div class="agent-avatar" :class="'avatar-' + a.color"
-             :style="a.gradient ? {background: a.gradient} : {}">
-          <span class="agent-emoji">{{ a.icon }}</span>
-          <span class="agent-status-dot" :class="'dot-' + a.status"></span>
-        </div>
-        <div class="agent-avatar-name">{{ a.shortName || a.name }}</div>
-        <div class="agent-avatar-role">{{ a.role }}</div>
+    <!-- 欢迎栏: 日期 + 简要统计 -->
+    <div class="kn-welcome-bar">
+      <div class="kn-date-block">
+        <div class="kn-date-day">{{ todayDateStr }}</div>
+        <div class="kn-date-weekday">{{ todayWeekday }}</div>
+      </div>
+      <div class="kn-welcome-stats">
+        <span class="stat-pill">✅ {{ todoCount }} 待办</span>
+        <span class="stat-pill">🔔 {{ unreadCount }} 未读</span>
+        <span class="stat-pill">👥 {{ dashboardData?.stats?.total || 0 }} 学生</span>
+        <span class="stat-pill" :class="{missing: (dashboardData?.stats?.missing||0) > 0}">❌ {{ dashboardData?.stats?.missing || 0 }} 未交周报</span>
+        <span class="stat-pill stat-overdue" v-if="overdueCount > 0">⚠ {{ overdueCount }} 逾期</span>
       </div>
     </div>
 
-    <!-- Agent 对话面板 -->
-    <div v-if="activeAgentId" class="agent-chat-panel">
-      <div class="agent-chat-header">
-        <span class="agent-chat-title">{{ activeAgent.icon }} {{ activeAgent.name }}</span>
-        <span class="agent-chat-desc">{{ activeAgent.description }}</span>
-        <button class="btn btn-sm btn-secondary" @click="activeAgentId=null">✕ 关闭</button>
-      </div>
-      <div class="chat-messages agent-chat-messages" ref="agentChatEl">
-        <div v-if="agentChatMessages.length === 0" class="text-muted text-center" style="padding:30px">
-          与 {{ activeAgent.name }} 对话 — {{ activeAgent.description }}
-        </div>
-        <div v-for="(msg, i) in agentChatMessages" :key="i"
-             class="chat-bubble" :class="msg.role">
-          <div v-html="formatMessage(msg.content)"></div>
-        </div>
-        <div v-if="agentStreaming" class="chat-bubble ai">
-          <span class="streaming-cursor">{{ agentStreamText }}</span><span class="cursor-blink">▍</span>
-        </div>
-      </div>
-      <div class="chat-input-row">
-        <textarea class="chat-input" v-model="agentChatInput"
-          @keydown.enter.exact.prevent="sendAgentChat"
-          :placeholder="'向 ' + (activeAgent?.shortName || activeAgent?.name) + ' 提问...'">
-        </textarea>
-        <button class="btn btn-primary btn-sm" :disabled="agentStreaming" @click="sendAgentChat">
-          {{ agentStreaming ? '...' : '发送' }}
-        </button>
-      </div>
-    </div>
+    <!-- 可滚动主区域 -->
+    <div class="kn-scroll-area">
 
-    <!-- 团队动态 feed -->
-    <div v-if="!activeAgentId" class="kn-feed">
-      <div class="kn-section-label">团队动态</div>
-      <div class="kn-feed-item" v-for="f in teamFeed" :key="f.time">
-        <span class="feed-time">{{ f.time }}</span>
-        <span class="feed-icon">{{ f.icon }}</span>
-        <span class="feed-text">{{ f.text }}</span>
-      </div>
-      <div v-if="teamFeed.length===0" class="text-muted" style="padding:12px">暂无动态</div>
-    </div>
-    <!-- Knowledge Base (file management) -->
-    <div v-if="!activeAgentId" class="kn-kb">
-      <div class="kn-section-label">
-        <span>📚 Knowledge Base</span>
-        <input class="kb-search" v-model="kbSearch" placeholder="搜索文件..." style="margin-left:8px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:13px">
-        <button class="btn btn-sm btn-secondary" @click="loadKbFiles" style="margin-left:4px">🔄</button>
-      </div>
-      <div v-if="kbLoading" class="text-muted" style="padding:12px">加载中...</div>
-      <div v-else-if="kbFilteredFiles.length===0" class="text-muted" style="padding:12px">无文件</div>
-      <div v-else class="kb-file-list">
-        <div class="kb-file-item" v-for="f in kbFilteredFiles.slice(0,30)" :key="f.path" @click="viewKbFile(f.path)">
-          <span class="kb-file-icon kb-ext-{{f.ext}}">{{ f.ext === 'md' ? '📝' : f.ext === 'json' ? '🔧' : f.ext === 'yaml' ? '⚙️' : '📄' }}</span>
-          <span class="kb-file-name">{{ f.name }}</span>
-          <span class="kb-file-path">{{ f.path }}</span>
-          <span class="kb-file-size">{{ f.size < 1024 ? f.size + 'B' : Math.round(f.size/1024) + 'KB' }}</span>
-        </div>
-        <div v-if="kbFilteredFiles.length > 30" class="text-muted" style="padding:8px;font-size:12px">还有 {{ kbFilteredFiles.length - 30 }} 个文件...</div>
-      </div>
-      <!-- KB file viewer modal -->
-      <div v-if="kbViewingFile" class="modal-overlay" @click.self="kbViewingFile=null">
-        <div class="modal modal-lg">
-          <div class="modal-header">
-            <span class="modal-title">📄 {{ kbViewingFileName }}</span>
-            <button class="btn btn-sm" @click="kbViewingFile=null">✕</button>
+      <!-- 分区1: 今日任务 (compact) -->
+      <div class="kn-section" v-if="!activeAgentId">
+        <div class="kn-section-label">📋 今日任务</div>
+        <div class="kn-todo-mini">
+          <div v-for="t in todayTasks.slice(0,5)" :key="t.task_id" class="kn-todo-row" @click="toggleTodo(t)">
+            <span class="kn-todo-check" :class="{done: t.status==='done'}">{{ t.status === 'done' ? '✓' : '○' }}</span>
+            <span class="kn-todo-prio" :class="'prio-' + (t.priority || 'medium')"></span>
+            <span class="kn-todo-text" :class="{done: t.status==='done'}">{{ t.title }}</span>
+            <span class="kn-todo-owner" v-if="t.owner_name">{{ t.owner_name }}</span>
           </div>
-          <div class="modal-body">
-            <pre class="kb-file-content">{{ kbFileContent }}</pre>
+          <div v-if="todayTasks.length===0" class="kn-todo-empty">今日无待办 — 喝杯咖啡 ☕</div>
+        </div>
+      </div>
+
+      <!-- 分区2: Agent 网格 -->
+      <div class="kn-section">
+        <div class="kn-section-label">🤖 Agent 团队 — 点击对话</div>
+        <div class="agent-grid">
+          <div v-for="a in agents" :key="a.id"
+               class="agent-avatar-card" :class="{selected: activeAgentId===a.id}"
+               @click="selectAgent(a.id)">
+            <div class="agent-avatar" :class="'avatar-' + a.color"
+                 :style="a.gradient ? {background: a.gradient} : {}">
+              <span class="agent-emoji">{{ a.icon }}</span>
+              <span class="agent-status-dot" :class="'dot-' + a.status"></span>
+            </div>
+            <div class="agent-avatar-name">{{ a.shortName || a.name }}</div>
+            <div class="agent-avatar-role">{{ a.role }}</div>
           </div>
         </div>
       </div>
-    </div>
 
+      <!-- Agent 对话面板 -->
+      <div v-if="activeAgentId" class="agent-chat-panel">
+        <div class="agent-chat-header">
+          <span class="agent-chat-title">{{ activeAgent.icon }} {{ activeAgent.name }}</span>
+          <span class="agent-chat-desc">{{ activeAgent.description }}</span>
+          <button class="btn btn-sm btn-secondary" @click="activeAgentId=null">✕ 关闭</button>
+        </div>
+        <div class="chat-messages agent-chat-messages" ref="agentChatEl">
+          <div v-if="agentChatMessages.length === 0" class="text-muted text-center" style="padding:30px">
+            与 {{ activeAgent.name }} 对话 — {{ activeAgent.description }}
+          </div>
+          <div v-for="(msg, i) in agentChatMessages" :key="i"
+               class="chat-bubble" :class="msg.role">
+            <div v-html="formatMessage(msg.content)"></div>
+          </div>
+          <div v-if="agentStreaming" class="chat-bubble ai">
+            <span class="streaming-cursor">{{ agentStreamText }}</span><span class="cursor-blink">▍</span>
+          </div>
+        </div>
+        <div class="chat-input-row">
+          <textarea class="chat-input" v-model="agentChatInput"
+            @keydown.enter.exact.prevent="sendAgentChat"
+            :placeholder="'向 ' + (activeAgent?.shortName || activeAgent?.name) + ' 提问...'">
+          </textarea>
+          <button class="btn btn-primary btn-sm" :disabled="agentStreaming" @click="sendAgentChat">
+            {{ agentStreaming ? '...' : '发送' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- 分区3: 团队动态 -->
+      <div class="kn-section" v-if="!activeAgentId">
+        <div class="kn-section-label">📡 团队动态</div>
+        <div class="kn-feed-mini">
+          <div class="kn-feed-row" v-for="f in teamFeed" :key="f.time + f.text">
+            <span class="feed-icon">{{ f.icon }}</span>
+            <span class="feed-text">{{ f.text }}</span>
+            <span class="feed-time" v-if="f.time">{{ f.time }}</span>
+          </div>
+          <div v-if="teamFeed.length===0" class="kn-todo-empty">暂无动态</div>
+        </div>
+      </div>
+
+    </div>
   </div>
 
   <!-- 周报 Cockpit Tab -->
@@ -1215,7 +1211,7 @@
 
 
 
-<script src="/js/api.js?v=076"></script>
-<script src="/js/teacher.js?v=076"></script>
+<script src="/js/api.js?v=077"></script>
+<script src="/js/teacher.js?v=077"></script>
 </body>
 </html>

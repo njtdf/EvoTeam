@@ -263,7 +263,7 @@ createApp({
     async function switchToDashboard() {
       activeTab.value = 'dashboard'
       await Promise.all([loadDashboard(), loadTeamFeed()])
-      loadKbFiles()
+      await loadTodayTasks()
     }
 
     async function loadDashboard() {
@@ -919,13 +919,33 @@ createApp({
       sttSummarizing.value = false
     }
 
-    // ===== ToDo =====
-    const todoItems = ref([])
-    const newTodoText = ref('')
-    const newTodoPriority = ref('medium')
-    const todoCount = computed(() => todoItems.value.filter(t => t.status !== 'done').length)
+   // ===== ToDo =====
+   const todoItems = ref([])
+   const newTodoText = ref('')
+   const newTodoPriority = ref('medium')
+   const todoCount = computed(() => todoItems.value.filter(t => t.status !== 'done').length)
 
-    async function switchToTodo() {
+   // ===== 总览 today tasks + date =====
+   const todayTasks = ref([])
+   const todayDateStr = computed(() => {
+     const d = new Date()
+     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0')
+   })
+   const todayWeekday = computed(() => {
+     const w = ['周日','周一','周二','周三','周四','周五','周六']
+     return w[new Date().getDay()]
+   })
+   async function loadTodayTasks() {
+     try {
+       const data = await api('/api/tasks?status=todo,in_progress')
+       todayTasks.value = (data.tasks || []).filter(t => {
+         if (!t.deadline) return true
+         return t.deadline <= todayDateStr.value + ' 23:59'
+       }).slice(0, 8)
+     } catch { todayTasks.value = [] }
+   }
+
+   async function switchToTodo() {
       activeTab.value = 'todo'; window.location.hash = 'todo'
       await loadTodo()
     }
@@ -1300,8 +1320,9 @@ return {
       meetingSubTab, sttRecording, sttTranscript, sttError, sttSummarizing,
       startSTT, stopSTT, sttSummarize,
       // ToDo
-      todoItems, newTodoText, newTodoPriority, todoCount,
-      switchToTodo, addTodo, toggleTodo,
+     todoItems, newTodoText, newTodoPriority, todoCount,
+     switchToTodo, addTodo, toggleTodo,
+     todayTasks, todayDateStr, todayWeekday, loadTodayTasks,
       // 通知
       emails, emailSyncing, unreadCount, switchToNotify, syncEmail,
       // 项目管理
