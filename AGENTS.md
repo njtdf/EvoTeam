@@ -61,4 +61,30 @@ Remove-Item script.mjs
 ```bash
 node -e "const fs=require('fs'); console.log(fs.readFileSync('path','utf8').slice(-500))"
 ```
-
+ 
+ ## 模块命名冲突教训 (2026-08-20 追加)
+ 
+ **问题**: 新建 `lib/memory.js`（SQLite LLM 记忆）覆盖了同名旧文件（JSON 学生记忆），导致 server.js / ai-context.js 的 `import { loadMemory, ... } from './memory.js'` 全部找不到导出 → 服务器启动崩溃。
+ 
+ **规则**:
+ 1. 新建模块**不要**与已有模块同名。用前缀区分（如 `llm-memory.js` vs `memory.js`）
+ 2. 创建前先 `git show HEAD:lib/xxx.js` 检查是否已有同名文件
+ 3. 如必须覆盖，先 grep 所有 `import.*from.*xxx` 确认影响范围
+ 
+ ## PowerShell heredoc 不支持 (2026-08-20 追加)
+ 
+ **问题**: `cat > file << 'EOF'` 是 bash 语法，PowerShell 不识别 `<<`，报 "Missing file specification after redirection operator"。
+ 
+ **规则**: 在 PowerShell 中写多行文件用 `@'...'@ | Set-Content -Path file -Encoding utf8`（here-string）或 `apply_patch Add File` 或 node `fs.writeFileSync`。
+ 
+ ## Express 路由参数冲突 (2026-08-20 追加)
+ 
+ **问题**: `/api/memory/:id` 和 `/api/memory/:agentId` 在 Express 中是**同一路由模式**（`:id` 和 `:agentId` 只是参数名不同，路径匹配规则相同）。先定义的路由会拦截所有匹配请求。
+ 
+ **规则**: 不同语义的 API 用不同路径前缀（如 `/api/memory/:id` vs `/api/llm-memory/:agentId`），不要靠参数名区分。
+ 
+ ## apply_patch 与中文 (2026-08-20 追加)
+ 
+ **问题**: apply_patch 的 context 行（space 前缀）匹配中文内容时容易失败，报 "invalid hunk" 或 "Expected update hunk to start with @@".
+ 
+ **规则**: 大段中文内容（如 CHANGELOG / DEVLOG）用 node 脚本 + `fs.readFileSync` + 字符串拼接 + `fs.writeFileSync` 写入，不用 apply_patch。

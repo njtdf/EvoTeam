@@ -12,7 +12,30 @@
 
 ---
 
-## v0.7.4 — 2026-08-20
+## v0.7.5 — 2026-08-20
+
+### 新增（Wave 8: SQLite 数据库 + LLM 记忆 + 课题组知识库）
+
+- **`lib/db.js`**（新建）— SQLite 15 张表 schema（students/reports/summaries/tasks/meetings/chat_messages/agent_chat_messages/value_cycles/trajectories/kb_documents/kb_keywords/llm_memory/calendar_events/submissions/schema_version），WAL 模式 + 外键 + busy_timeout，幂等 initDb()
+- **`lib/llm-memory.js`**（新建）— LLM 跨会话记忆系统：storeMemory / retrieveMemories / searchMemories / deleteMemory / buildMemoryContext / extractMemoriesFromChat（每 5 条聊天消息自动调 DeepSeek 抽取关键信息 → SQLite 持久化）
+- **`lib/knowledge.js`**（新建）— 课题组知识库 TF-IDF 语义搜索：indexAll（29 文档 / 5622 关键词）/ searchKnowledge / getDocumentStats / getKnowledgeGraph（76 节点 / 58 边）
+- **`scripts/migrate-to-sqlite.mjs`**（新建）— 一次性全量迁移：students.yaml / reports / summaries / tasks / meetings / chat / agent-chat / valuecycles / trajectories → SQLite，幂等可重复运行
+- **`lib/ai.js`** 扩展 — 新增 `extractMemories(messages)` 调 DeepSeek JSON 模式抽取记忆，无 API key 降级返回空数组
+- **`lib/ai-context.js`** 扩展 — buildStudentContext 末尾追加 LLM 记忆段落，AI 对话自动注入跨会话历史决策/反馈/偏好
+- **`lib/chat.js`** 扩展 — saveMessage 末尾每 5 条消息异步触发 extractMemoriesFromChat，不阻塞聊天响应
+- **`server.js`** 新增 11 条路由 + initDb() 启动初始化：db/stats, db/migrate, llm-memory CRUD+search, kb search+documents+stats+graph+index
+
+### 修复
+- **`memory.js` 命名冲突** — 前序 session 覆盖了旧 memory.js（JSON 学生记忆）导致 server.js / ai-context.js 导入崩溃。拆分：旧 → `lib/memory.js`（恢复 loadMemory/updateMemory/accumulateFromReport/getContextString），新 → `lib/llm-memory.js`（SQLite LLM 记忆）
+
+### 验证
+- 11 条路由全部 200 PASS
+- 回归 6 条现有路由全部 200 PASS
+- 迁移数据：students=19, reports=13, summaries=12, tasks=40, meetings=4, chat_messages=18, agent_chat=22, value_cycles=14, trajectories=1
+
+---
+
+ — 2026-08-20
 
 ### 新增
 - 学生端 `student.js` 新增 4 大模块：brandName 品牌切换、日历（复用 teacher 逻辑）、AI 助手（SSE 聊天 + 历史加载 + 周报上下文注入）、知识库（文件列表 + 搜索 + 查看）

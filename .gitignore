@@ -72,6 +72,11 @@ labos/validation-report-*.md
 # Value cycle data (student career goals + advisor assessments - PII)
 labos/valuecycles/
 
+# SQLite database (regenerable via scripts/migrate-to-sqlite.mjs, contains PII)
+labos/autoprof.db
+labos/autoprof.db-shm
+labos/autoprof.db-wal
+
 # Temp test artifacts
 _cookie.txt
 _server.log

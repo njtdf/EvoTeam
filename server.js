@@ -43,6 +43,9 @@ import { buildStudentContext } from './lib/ai-context.js'
 import { loadValueCycle, updateValueCycle, loadGroupValueCycle, saveGroupValueCycle, getAllAlignments } from './lib/valuecycle.js'
 import { loadCalendarEvents } from './lib/calendar.js'
 import { searchTrajectories, getTrajectoryStats, listTrajectories } from './lib/trajectory.js'
+import { getDb, initDb, getStats } from './lib/db.js'
+import { storeMemory, retrieveMemories, searchMemories, deleteMemory, buildMemoryContext, extractMemoriesFromChat } from './lib/llm-memory.js'
+import { indexAll, searchKnowledge, getDocumentStats, getKnowledgeGraph } from './lib/knowledge.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const labosDir = join(__dirname, 'labos')
@@ -1137,6 +1140,145 @@ app.post('/api/valuecycle/:id/decision', requireRole('teacher'), (req, res) => {
     })
     updateValueCycle(req.params.id, { decision_log: log })
     res.json({ ok: true, decision_count: log.length, valuecycle: loadValueCycle(req.params.id) })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// --- Wave 8: SQLite DB + LLM Memory + Knowledge Base ---
+
+// Init SQLite on startup (idempotent — CREATE TABLE IF NOT EXISTS)
+try {
+  initDb()
+  console.log('[db.js] SQLite ready (labos/autoprof.db)')
+} catch (e) {
+  console.error('[db.js] initDb failed:', e.message)
+}
+
+// API: DB stats — row counts for all tables
+app.get('/api/db/stats', requireRole('teacher'), (req, res) => {
+  try {
+    res.json(getStats())
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// API: DB migrate — re-run full file→SQLite migration (idempotent)
+app.post('/api/db/migrate', requireRole('teacher'), async (req, res) => {
+  try {
+    const { execSync } = await import('child_process')
+    execSync('node scripts/migrate-to-sqlite.mjs', { cwd: __dirname, stdio: 'pipe' })
+    res.json({ ok: true, stats: getStats() })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// API: LLM Memory — list memories for an agent (+optional student filter)
+app.get('/api/llm-memory/:agentId', requireRole('teacher'), (req, res) => {
+  try {
+    const mems = retrieveMemories({
+      agent_id: req.params.agentId,
+      student_id: req.query.student_id || undefined,
+      limit: parseInt(req.query.limit) || 50
+    })
+    res.json({ memories: mems })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// API: LLM Memory — store a memory manually
+app.post('/api/llm-memory/:agentId', requireRole('teacher'), (req, res) => {
+  try {
+    const result = storeMemory({
+      agent_id: req.params.agentId,
+      student_id: req.body.student_id,
+      memory_type: req.body.memory_type || 'note',
+      content: req.body.content,
+      importance: req.body.importance || 5,
+      source: req.body.source || 'manual'
+    })
+    res.json(result)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// API: LLM Memory — keyword search
+app.get('/api/llm-memory/:agentId/search', requireRole('teacher'), (req, res) => {
+  try {
+    const results = searchMemories({
+      agent_id: req.params.agentId,
+      student_id: req.query.student_id || undefined,
+      query: req.query.q || '',
+      limit: parseInt(req.query.limit) || 10
+    })
+    res.json({ results })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// API: LLM Memory — delete single memory
+app.delete('/api/llm-memory/:id', requireRole('teacher'), (req, res) => {
+  try {
+    const result = deleteMemory(req.params.id)
+    res.json(result)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// API: Knowledge Base — TF-IDF semantic search
+app.get('/api/kb/search', requireAuth, (req, res) => {
+  try {
+    const results = searchKnowledge(req.query.q || '', parseInt(req.query.limit) || 10)
+    res.json({ results })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// API: Knowledge Base — document list (paginated from kb_documents table)
+app.get('/api/kb/documents', requireAuth, (req, res) => {
+  try {
+    const db = getDb()
+    const page = parseInt(req.query.page) || 1
+    const perPage = parseInt(req.query.per_page) || 20
+    const offset = (page - 1) * perPage
+    const rows = db.prepare('SELECT id, path, title, category, student_id, created_at FROM kb_documents ORDER BY created_at DESC LIMIT ? OFFSET ?').all(perPage, offset)
+    const total = db.prepare('SELECT COUNT(*) as c FROM kb_documents').get().c
+    res.json({ documents: rows, total, page, per_page: perPage })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// API: Knowledge Base — rebuild full index
+app.post('/api/kb/index', requireRole('teacher'), (req, res) => {
+  try {
+    const count = indexAll()
+    res.json({ ok: true, indexed: count })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// API: Knowledge Base — stats
+app.get('/api/kb/stats', requireAuth, (req, res) => {
+  try {
+    res.json(getDocumentStats())
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// API: Knowledge Base — entity graph (student→project→task→meeting)
+app.get('/api/kb/graph', requireRole('teacher'), (req, res) => {
+  try {
+    res.json(getKnowledgeGraph())
   } catch (e) {
     res.status(500).json({ error: e.message })
   }
