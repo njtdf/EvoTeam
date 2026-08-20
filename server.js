@@ -250,13 +250,14 @@ app.get('/api/summary/:id', requireAuth, (req, res) => {
 })
 
 // --- API: Chat (SSE streaming) ---
-app.get('/api/chat/:id', requireRole('teacher'), (req, res) => {
-  const history = loadChat(req.params.id)
+app.get('/api/chat/:id', requireAuth, (req, res) => {
+  const chatId = req.user.role === 'teacher' ? req.params.id : req.user.id
+  const history = loadChat(chatId)
   res.json({ messages: history })
 })
 
-app.post('/api/chat/:id', requireRole('teacher'), (req, res) => {
-  const studentId = req.params.id
+app.post('/api/chat/:id', requireAuth, (req, res) => {
+  const studentId = req.user.role === 'teacher' ? req.params.id : req.user.id
   const { message } = req.body
   if (!message || !message.trim()) {
     return res.status(400).json({ error: 'Empty message' })

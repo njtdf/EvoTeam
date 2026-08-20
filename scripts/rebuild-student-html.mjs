@@ -1,4 +1,6 @@
-<!DOCTYPE html>
+import fs from 'fs';
+
+const html = `<!DOCTYPE html>
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
@@ -308,6 +310,9 @@
   </div>
 </div>
 <script src="/js/api.js?v=073"></script>
-<script src="/js/student.js?v=074"></script>
+<script src="/js/student.js?v=073"></script>
 </body>
-</html>
+</html>`;
+
+fs.writeFileSync('public/student.html', html);
+console.log('student.html rewritten');

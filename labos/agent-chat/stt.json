@@ -1,0 +1,12 @@
+[
+  {
+    "role": "user",
+    "content": "你在不",
+    "timestamp": "2026-08-20T12:50:30.229Z"
+  },
+  {
+    "role": "assistant",
+    "content": "我在。请问有什么需要转写的语音内容？",
+    "timestamp": "2026-08-20T12:50:31.327Z"
+  }
+]
