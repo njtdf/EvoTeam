@@ -659,6 +659,27 @@ status: "on_track"
     }
 
 
+    // ===== Course =====
+    const courseData = ref(null)
+    const courseLoading = ref(false)
+    const courseSubTab = ref('schedule')
+
+    async function switchToCourse() {
+      activeTab.value = 'course'
+      await loadCourse()
+    }
+
+    async function loadCourse() {
+      courseLoading.value = true
+      try {
+        courseData.value = await api('/api/course/电力系统基础')
+      } catch(e) {
+        console.error('Course load error:', e)
+      }
+      courseLoading.value = false
+    }
+
+
     return {
       gradSummary, switchToGraduation,
       user, markdown, previewHtml, submitting, summary, summaryLoading,
@@ -694,6 +715,7 @@ status: "on_track"
       loadKb, viewKbFile, switchToKb,
       // 我的档案
       myProfile, profileLoading, switchToProfile, capabilityLabels,
+      courseData, courseLoading, courseSubTab, switchToCourse,
     }
   },
 }).mount('#app')

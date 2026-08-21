@@ -1620,3 +1620,53 @@ body {
 .lab-progress-student-chip { display:flex; align-items:center; gap:4px; font-size:11px; padding:2px 8px; border-radius:4px; background:var(--border-light); cursor:pointer; }
 .lab-progress-student-bar { width:40px; height:4px; background:var(--border); border-radius:2px; overflow:hidden; }
 .lab-progress-student-bar-fill { height:100%; border-radius:2px; }
+
+/* --- Course Page --- */
+.course-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+.course-title-block h2 { font-size:22px; margin-bottom:4px; }
+.course-meta { display:flex; gap:8px; flex-wrap:wrap; }
+.course-meta .stat-pill { font-size:12px; padding:4px 10px; }
+.course-progress-overall { margin:16px 0; }
+.course-progress-overall .progress-bar-large { height:28px; }
+.course-progress-overall .progress-bar-large-fill { font-size:14px; display:flex; align-items:center; justify-content:center; font-weight:600; }
+
+.course-subtabs { display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid var(--border); }
+.course-subtab { padding:8px 16px; cursor:pointer; border:none; background:none; font-size:14px; color:var(--text-secondary); border-bottom:2px solid transparent; margin-bottom:-2px; transition:all .2s; }
+.course-subtab:hover { color:var(--primary); }
+.course-subtab.active { color:var(--primary); border-bottom-color:var(--primary); font-weight:600; }
+
+.course-objective-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:12px; }
+.course-objective-card h4 { font-size:14px; margin-bottom:6px; color:var(--primary); }
+.course-objective-card .obj-grad { font-size:12px; color:var(--text-muted); display:inline-block; background:var(--primary-light); padding:2px 8px; border-radius:4px; margin-left:8px; }
+.course-objective-card p { font-size:13px; color:var(--text-secondary); line-height:1.6; }
+
+.course-schedule-list { display:flex; flex-direction:column; gap:8px; }
+.schedule-week { display:flex; align-items:flex-start; gap:12px; padding:12px 16px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); border-left:3px solid var(--border); }
+.schedule-week.current { border-left-color:var(--primary); background:var(--primary-light); }
+.schedule-week.past { border-left-color:#10b981; opacity:0.7; }
+.schedule-week.future { border-left-color:var(--border); }
+.schedule-week-num { min-width:40px; text-align:center; font-weight:700; font-size:16px; }
+.schedule-week-content { flex:1; }
+.schedule-week-content h4 { font-size:14px; margin-bottom:4px; }
+.schedule-week-meta { display:flex; gap:8px; flex-wrap:wrap; font-size:12px; color:var(--text-muted); }
+.schedule-week-meta .tag { padding:1px 6px; border-radius:3px; font-size:11px; }
+.schedule-week .exam-badge { background:#ef4444; color:#fff; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; }
+
+.course-chapter-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px; }
+.course-chapter-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px; }
+.course-chapter-card h4 { font-size:14px; margin-bottom:6px; }
+.course-chapter-card .ch-num { display:inline-block; background:var(--primary); color:#fff; width:24px; height:24px; line-height:24px; text-align:center; border-radius:50%; font-size:12px; margin-right:6px; }
+.course-chapter-card .ch-hours { font-size:12px; color:var(--text-muted); }
+.course-chapter-card ul { margin:8px 0 0 16px; font-size:12px; color:var(--text-secondary); }
+.course-chapter-card li { margin:2px 0; }
+
+.course-assessment-table { width:100%; border-collapse:collapse; }
+.course-assessment-table th, .course-assessment-table td { padding:8px 12px; text-align:left; border-bottom:1px solid var(--border); font-size:13px; }
+.course-assessment-table th { background:var(--bg); font-weight:600; }
+.course-assessment-table .weight-bar { display:inline-block; height:8px; background:var(--primary); border-radius:4px; margin-left:4px; vertical-align:middle; }
+
+.course-resources { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:12px; }
+.course-resource-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px; }
+.course-resource-card h4 { font-size:14px; margin-bottom:6px; }
+.course-resource-card a { color:var(--primary); font-size:13px; text-decoration:none; }
+.course-resource-card a:hover { text-decoration:underline; }

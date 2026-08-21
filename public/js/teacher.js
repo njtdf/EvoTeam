@@ -1461,6 +1461,40 @@ async function switchToDashboard() {
       return map[status] || 0
     }
 
+    // ===== Course =====
+    const courseData = ref(null)
+    const courseLoading = ref(false)
+    const courseSubTab = ref('schedule')
+
+    async function switchToCourse() {
+      activeTab.value = 'course'
+      await loadCourse()
+    }
+
+    async function loadCourse() {
+      courseLoading.value = true
+      try {
+        courseData.value = await api('/api/course/电力系统基础')
+      } catch(e) {
+        console.error('Course load error:', e)
+      }
+      courseLoading.value = false
+    }
+
+    async function updateCourseWeek() {
+      if (!courseData.value) return
+      try {
+        const updated = await api('/api/course/电力系统基础/week', {
+          method: 'PUT',
+          body: JSON.stringify({ week: courseData.value.current_week })
+        })
+        if (updated) courseData.value = updated
+      } catch(e) {
+        console.error('Update week error:', e)
+      }
+    }
+
+
 return {
       gradStudentId, gradSummary, switchToGraduation, loadGraduation, updateGradReq, updateGradNotes, seedGraduation,
       user, students, selectedStudentId, report, summary, chatMessages,
@@ -1560,4 +1594,5 @@ return {
       kbNextPage, kbPrevPage,
     }
   },
+      courseData, courseLoading, courseSubTab, switchToCourse, updateCourseWeek,
 }).mount('#app')

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EvoTeam - Student</title>
-<link rel="stylesheet" href="/css/app.css?v=0716">
+<link rel="stylesheet" href="/css/app.css?v=0717">
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -22,6 +22,7 @@
         <a class="sidebar-nav-item" :class="{active:activeTab==='calendar'}" @click="switchToCalendar"><span class="nav-icon">📅</span> 日历</a>
         <a class="sidebar-nav-item" :class="{active:activeTab==='kb'}" @click="switchToKb"><span class="nav-icon">📚</span> 知识库</a>
         <a class="sidebar-nav-item" :class="{active:activeTab==='profile'}" @click="switchToProfile"><span class="nav-icon">📊</span> 我的档案</a>
+        <a class="sidebar-nav-item" :class="{active:activeTab==='course'}" @click="switchToCourse"><span class="nav-icon">📖</span> 课程</a>
         <div class="sidebar-nav-section">Agent</div>
         <a class="sidebar-nav-item" :class="{active:activeTab==='assistant'}" @click="switchToAssistant"><span class="nav-icon">🤖</span> AI 助手</a>
         <div class="sidebar-nav-section">科研工具</div>
@@ -447,10 +448,119 @@
     <div v-else class="empty-state">暂无档案数据</div>
   </div>
 
+
+  <!-- Course Tab -->
+  <div v-if="activeTab==='course'" class="content-section">
+    <div v-if="courseLoading" class="loading">加载中...</div>
+    <div v-else-if="courseData">
+      <div class="course-header">
+        <div class="course-title-block">
+          <h2>{{ courseData.name_cn }} <span style="font-size:14px;color:var(--text-muted)">{{ courseData.name_en }}</span></h2>
+          <div class="course-meta">
+            <span class="stat-pill">学分: {{ courseData.credits }}</span>
+            <span class="stat-pill">学时: {{ courseData.total_hours }}</span>
+            <span class="stat-pill">学期: {{ courseData.semester }}</span>
+            <span class="stat-pill">{{ courseData.category }}</span>
+          </div>
+          <div style="margin-top:6px;font-size:13px;color:var(--text-secondary)">
+            教师: {{ courseData.instructors.join('、') }} | 先修: {{ courseData.prerequisites.join('、') }}
+          </div>
+        </div>
+      </div>
+
+      <div class="course-progress-overall">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:14px;font-weight:600">课程进度</span>
+          <span style="font-size:13px;color:var(--text-muted)">第 {{ courseData.current_week }} / {{ courseData.total_weeks }} 周</span>
+        </div>
+        <div class="progress-bar-large">
+          <div class="progress-bar-large-fill" :style="{width: courseData.progress_pct + '%', background: 'var(--primary)'}">
+            {{ courseData.progress_pct }}%
+          </div>
+        </div>
+      </div>
+
+      <div class="course-subtabs">
+        <button class="course-subtab" :class="{active:courseSubTab==='schedule'}" @click="courseSubTab='schedule'">教学进度</button>
+        <button class="course-subtab" :class="{active:courseSubTab==='objectives'}" @click="courseSubTab='objectives'">课程目标</button>
+        <button class="course-subtab" :class="{active:courseSubTab==='chapters'}" @click="courseSubTab='chapters'">章节内容</button>
+        <button class="course-subtab" :class="{active:courseSubTab==='assessment'}" @click="courseSubTab='assessment'">考核方式</button>
+        <button class="course-subtab" :class="{active:courseSubTab==='resources'}" @click="courseSubTab='resources'">学习资源</button>
+      </div>
+
+      <div v-if="courseSubTab==='schedule'" class="course-schedule-list">
+        <div v-for="w in courseData.schedule" :key="w.week"
+             class="schedule-week"
+             :class="{current: w.is_current, past: w.is_past, future: w.is_future}">
+          <div class="schedule-week-num">{{ w.week }}</div>
+          <div class="schedule-week-content">
+            <h4>{{ w.title }} <span v-if="w.is_exam" class="exam-badge">考试周</span></h4>
+            <div class="schedule-week-meta">
+              <span>{{ w.hours }} 学时</span>
+              <span v-if="w.chapter_titles && w.chapter_titles.length" class="tag">第{{ w.chapters.join('、') }}章</span>
+              <span v-if="w.homework" class="tag">作业: {{ w.homework }}</span>
+              <span v-if="w.is_current" style="color:var(--primary);font-weight:600">当前</span>
+              <span v-if="w.is_past" style="color:#10b981">已完成</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="courseSubTab==='objectives'">
+        <div v-for="obj in courseData.objectives" :key="obj.id" class="course-objective-card">
+          <h4>目标{{ obj.id }}: {{ obj.desc }} <span class="obj-grad">毕业要求 {{ obj.grad_req }}</span></h4>
+          <p>{{ obj.detail }}</p>
+        </div>
+      </div>
+
+      <div v-if="courseSubTab==='chapters'" class="course-chapter-grid">
+        <div v-for="ch in courseData.chapters" :key="ch.ch" class="course-chapter-card">
+          <h4><span class="ch-num">{{ ch.ch }}</span>{{ ch.title }}</h4>
+          <span class="ch-hours">{{ ch.hours }} 学时 | 第{{ ch.part }}部分 | 目标{{ ch.obj.join('、') }}</span>
+          <ul>
+            <li v-for="sec in ch.sections" :key="sec">{{ sec }}</li>
+          </ul>
+        </div>
+      </div>
+
+      <div v-if="courseSubTab==='assessment'">
+        <table class="course-assessment-table">
+          <thead><tr><th>考核环节</th><th>类型</th><th>权重</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr v-for="a in courseData.assessment" :key="a.item">
+              <td>{{ a.item }}</td><td>{{ a.type }}</td>
+              <td>{{ a.weight }}% <span class="weight-bar" :style="{width: a.weight * 3 + 'px'}"></span></td>
+              <td>{{ a.desc }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div v-if="courseSubTab==='resources'" class="course-resources">
+        <div class="course-resource-card">
+          <h4>教材</h4><p>{{ courseData.textbook }}</p>
+        </div>
+        <div class="course-resource-card">
+          <h4>参考书目</h4>
+          <ul style="margin-left:16px;font-size:13px">
+            <li v-for="ref in courseData.references" :key="ref" style="margin:4px 0">{{ ref }}</li>
+          </ul>
+        </div>
+        <div class="course-resource-card">
+          <h4>在线课程 (MOOC)</h4>
+          <div v-for="m in courseData.mooc_links" :key="m.url" style="margin:4px 0">
+            <a :href="m.url" target="_blank">{{ m.name }}</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div v-else class="empty-state">未找到课程数据</div>
+  </div>
+
 </main>
   </div>
 </div>
-<script src="/js/api.js?v=0716"></script>
-<script src="/js/student.js?v=0716"></script>
+<script src="/js/api.js?v=0717"></script>
+<script src="/js/student.js?v=0717"></script>
 </body>
 </html>

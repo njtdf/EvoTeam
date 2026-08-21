@@ -1944,6 +1944,36 @@ app.get('/api/flywheel/log', requireRole('teacher'), (req, res) => {
   }
 });
 
+
+// ===== Course Routes =====
+app.get('/api/courses', (req, res) => {
+  try { res.json(listCourses()) } catch(e) { res.status(500).json({error:e.message}) }
+})
+
+app.get('/api/course/:name', (req, res) => {
+  try {
+    const detail = getCourseDetail(req.params.name)
+    if (!detail) return res.status(404).json({error:'Course not found'})
+    res.json(detail)
+  } catch(e) { res.status(500).json({error:e.message}) }
+})
+
+app.put('/api/course/:name/week', requireAuth, requireRole('teacher'), (req, res) => {
+  try {
+    const updated = updateCurrentWeek(req.params.name, req.body.week)
+    if (!updated) return res.status(404).json({error:'Course not found'})
+    res.json(updated)
+  } catch(e) { res.status(500).json({error:e.message}) }
+})
+
+app.get('/api/course/:name/progress', (req, res) => {
+  try {
+    const p = getCourseProgress(req.params.name)
+    if (!p) return res.status(404).json({error:'Course not found'})
+    res.json(p)
+  } catch(e) { res.status(500).json({error:e.message}) }
+})
+
 const server = app.listen(PORT, () => {
   console.log(`\n  AutoProf Lab Brief v2 ready:`)
   console.log(`  Login:    http://localhost:${PORT}/login`)
@@ -1982,6 +2012,7 @@ wss.on('connection', (ws) => {
 })
 import { loadSkillManifest, runSkill } from './lib/skills.js'
 import { getScenarios as getInterviewScenarios, startInterview, continueInterview } from './lib/interview.js'
+import { getCourseDetail, listCourses, updateCurrentWeek, getCourseProgress } from './lib/course.js'
 // --- API: AI 工具箱 (Feature 6/16) ---
 app.get('/api/skills', requireAuth, (req, res) => {
   const manifest = loadSkillManifest()
