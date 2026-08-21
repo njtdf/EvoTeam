@@ -47,6 +47,8 @@ import { getDb, initDb, getStats } from './lib/db.js'
 import { storeMemory, retrieveMemories, searchMemories, deleteMemory, buildMemoryContext, extractMemoriesFromChat } from './lib/llm-memory.js'
 import { indexAll, searchKnowledge, getDocumentStats, getKnowledgeGraph } from './lib/knowledge.js'
 
+import { getRequirementsTemplate, getRequirementCategories, seedGraduationRequirements, updateRequirement, getGraduationSummary, getAllGraduationSummaries, syncToDb as syncGraduationToDb, indexToKb as indexGraduationToKb } from './lib/graduation.js'
+
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const labosDir = join(__dirname, 'labos')
 const app = express()
@@ -1065,6 +1067,79 @@ app.put('/api/valuecycle/:id/assessment', requireRole('teacher'), (req, res) => 
       advisor_assessment: { ...vc.advisor_assessment, ...req.body }
     })
     res.json({ ok: true, valuecycle: loadValueCycle(req.params.id) })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// --- Graduation (v0.7.8 — NNU standard [需核对]) ---
+app.get('/api/graduation/categories', requireAuth, (req, res) => {
+  res.json(getRequirementCategories())
+})
+
+app.get('/api/graduation/template/:role', requireRole('teacher'), (req, res) => {
+  res.json(getRequirementsTemplate(req.params.role))
+})
+
+app.get('/api/graduation/all', requireRole('teacher'), (req, res) => {
+  try {
+    const users = loadUsers().filter(u => u.role !== 'teacher')
+    res.json({ students: getAllGraduationSummaries(users.map(u => u.id)) })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.get('/api/graduation/:id', requireAuth, (req, res) => {
+  try {
+    const vc = loadValueCycle(req.params.id)
+    const gs = vc.graduation_state
+    if (!gs || !gs.requirements || gs.requirements.length === 0) {
+      const users = loadUsers()
+      const u = users.find(x => x.id === req.params.id)
+      if (u && u.role !== 'teacher') {
+        seedGraduationRequirements(u.id, u.role)
+      }
+    }
+    res.json(getGraduationSummary(req.params.id))
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.post('/api/graduation/:id/seed', requireRole('teacher'), (req, res) => {
+  try {
+    const users = loadUsers()
+    const u = users.find(x => x.id === req.params.id)
+    if (!u) return res.status(404).json({ error: 'Student not found' })
+    const role = req.body.role || u.role
+    const gs = seedGraduationRequirements(req.params.id, role)
+    try { syncGraduationToDb(req.params.id) } catch {}
+    try { indexGraduationToKb(req.params.id) } catch {}
+    res.json({ ok: true, graduation_state: gs })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.put('/api/graduation/:id/requirement/:reqId', requireAuth, (req, res) => {
+  try {
+    if (req.user.role === 'student' && req.user.id !== req.params.id) {
+      return res.status(403).json({ error: 'Students can only update their own requirements' })
+    }
+    if (req.user.role === 'teacher') {
+      // teachers can edit any
+    } else if (req.user.id !== req.params.id) {
+      return res.status(403).json({ error: 'Forbidden' })
+    }
+    const patch = {}
+    if (req.body.status) patch.status = req.body.status
+    if (req.body.met_at !== undefined) patch.met_at = req.body.met_at
+    if (req.body.notes !== undefined) patch.notes = req.body.notes
+    const gs = updateRequirement(req.params.id, req.params.reqId, patch)
+    try { syncGraduationToDb(req.params.id) } catch {}
+    try { indexGraduationToKb(req.params.id) } catch {}
+    res.json({ ok: true, graduation_state: gs })
   } catch (e) {
     res.status(500).json({ error: e.message })
   }

@@ -115,6 +115,53 @@ createApp({
       if (!content) return ''
       try { return marked.parse(content) } catch { return content }
     }
+    // ===== 毕业状态 =====
+    const gradStudentId = ref('')
+    const gradSummary = ref(null)
+
+    async function switchToGraduation() { activeTab.value = 'graduation'; window.location.hash = 'graduation'; if (students.value.length === 0) await loadStudents() }
+
+    async function loadGraduation() {
+      if (!gradStudentId.value) { gradSummary.value = null; return }
+      try {
+        gradSummary.value = await api('/api/graduation/' + gradStudentId.value)
+      } catch (e) { showToast('加载毕业状态失败: ' + e.message) }
+    }
+
+    async function updateGradReq(reqId, status) {
+      if (!gradStudentId.value) return
+      try {
+        const r = await api('/api/graduation/' + gradStudentId.value + '/requirement/' + reqId, {
+          method: 'PUT', body: JSON.stringify({ status })
+        })
+        if (r.ok) {
+          const updated = await api('/api/graduation/' + gradStudentId.value)
+          gradSummary.value = updated
+          showToast('已更新')
+        }
+      } catch (e) { showToast('更新失败: ' + e.message) }
+    }
+
+    async function updateGradNotes(reqId, notes) {
+      if (!gradStudentId.value) return
+      try {
+        await api('/api/graduation/' + gradStudentId.value + '/requirement/' + reqId, {
+          method: 'PUT', body: JSON.stringify({ notes })
+        })
+      } catch (e) { showToast('备注保存失败: ' + e.message) }
+    }
+
+    async function seedGraduation(student) {
+      if (!student?.id) return
+      try {
+        const r = await api('/api/graduation/' + student.id + '/seed', {
+          method: 'POST', body: JSON.stringify({ role: student.role })
+        })
+        if (r.ok) { await loadGraduation(); showToast('毕业模板已重置') }
+      } catch (e) { showToast('重置失败: ' + e.message) }
+    }
+
+
 
     // ===== 会议 Tab =====
     async function switchToMeeting() { activeTab.value = 'meeting'; await loadMeetings() }
@@ -302,7 +349,7 @@ createApp({
      user.value = u
      await loadStudents()
      const hash = window.location.hash.slice(1)
-     const validTabs = ['dashboard','todo','notify','projects','cockpit','meeting','kanban','revision','skills','submissions','review','exam','teaching','workload','invoice','interview','valuecycle','agents','calendar','knowledge']
+     const validTabs = ['graduation', 'dashboard','todo','notify','projects','cockpit','meeting','kanban','revision','skills','submissions','review','exam','teaching','workload','invoice','interview','valuecycle','agents','calendar','knowledge']
      if (hash && validTabs.includes(hash)) {
        if (hash === 'dashboard') await switchToDashboard()
         else if (hash === 'todo') await switchToTodo()
@@ -1261,6 +1308,7 @@ createApp({
   function kbPrevPage() { if (kbPage.value > 1) { kbPage.value--; loadKbDocuments() } }
 
 return {
+      gradStudentId, gradSummary, switchToGraduation, loadGraduation, updateGradReq, updateGradNotes, seedGraduation,
       user, students, selectedStudentId, report, summary, chatMessages,
       // 价值链
       groupVc, alignments, selectedVcStudent, vcSaving,

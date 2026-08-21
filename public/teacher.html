@@ -8,7 +8,7 @@
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<link rel="stylesheet" href="/css/app.css?v=077">
+<link rel="stylesheet" href="/css/app.css?v=078">
 </head>
 <body>
 <div id="app">
@@ -31,6 +31,7 @@
         <a class="sidebar-nav-item" :class="{active:activeTab==='meeting'}" @click="switchToMeeting"><span class="nav-icon">🗓️</span> 会议</a>
         <a class="sidebar-nav-item" :class="{active:activeTab==='kanban'}" @click="switchToKanban"><span class="nav-icon">📋</span> 任务</a>
         <a class="sidebar-nav-item" :class="{active:activeTab==='revision'}" @click="switchToRevision"><span class="nav-icon">✍️</span> 修改</a>
+        <a class="sidebar-nav-item" :class="{active:activeTab==='graduation'}" @click="switchToGraduation"><span class="nav-icon">🎓</span> 毕业</a>
         <div class="sidebar-nav-section">Agent</div>
         <a class="sidebar-nav-item" :class="{active:activeTab==='agents'}" @click="switchToAgents"><span class="nav-icon">🤖</span> 实时状态</a>
         <div class="sidebar-nav-section">科研工具</div>
@@ -875,6 +876,69 @@
   </div>
 
  <!-- Agent 面板 -->
+  <div v-if="activeTab==='graduation'" class="graduation-view" style="padding:16px">
+    <div class="graduation-header" style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <h2 style="margin:0">🎓 毕业状态</h2>
+      <select class="student-select" v-model="gradStudentId" @change="loadGraduation" style="width:200px">
+        <option value="">选择学生</option>
+        <option v-for="s in students" :key="s.id" :value="s.id">{{ s.id }} - {{ s.name }}</option>
+      </select>
+      <button v-if="gradStudentId" class="btn btn-sm" @click="seedGraduation(student)">重置模板</button>
+      <span class="text-muted" style="font-size:12px">{{ gradSummary?.template_note || '' }}</span>
+    </div>
+
+    <div v-if="!gradStudentId" class="empty-state">选择一个学生查看毕业要求进度</div>
+
+    <div v-if="gradSummary && gradStudentId" class="graduation-content">
+      <div class="graduation-overview" style="display:flex;gap:20px;margin-bottom:20px">
+        <div class="card" style="flex:1">
+          <div class="card-title">学位 / 进度</div>
+          <div style="font-size:28px;font-weight:bold">{{ gradSummary.degree }}</div>
+          <div class="graduation-bar-container" style="margin:12px 0">
+            <div class="graduation-bar-fill" :style="{ width: gradSummary.progress_pct + '%' }" :class="'risk-' + gradSummary.risk_level"></div>
+          </div>
+          <div style="text-align:center">{{ gradSummary.progress_pct }}% ({{ gradSummary.done }}/{{ gradSummary.total }} 完成)</div>
+          <div class="risk-badge" :class="'risk-' + gradSummary.risk_level" style="margin-top:8px;text-align:center">
+            风险: {{ gradSummary.risk_level }}
+          </div>
+        </div>
+        <div class="card" style="flex:1">
+          <div class="card-title">统计</div>
+          <div style="display:flex;gap:12px;text-align:center;margin-top:8px">
+            <div style="flex:1"><div style="font-size:24px;color:#07C160">{{ gradSummary.done }}</div><div class="text-muted">完成</div></div>
+            <div style="flex:1"><div style="font-size:24px;color:#faad14">{{ gradSummary.in_progress }}</div><div class="text-muted">进行中</div></div>
+            <div style="flex:1"><div style="font-size:24px;color:#ff4d4f">{{ gradSummary.not_started }}</div><div class="text-muted">未开始</div></div>
+          </div>
+          <div v-if="gradSummary.expected_graduation" style="margin-top:12px;text-align:center">
+            <span class="text-muted">预计毕业:</span> {{ gradSummary.expected_graduation }}
+          </div>
+        </div>
+      </div>
+
+      <div v-for="(cat, catId) in gradSummary.by_category" :key="catId" class="card" style="margin-bottom:12px">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+          <span>{{ cat.items[0]?.id?.charAt(0) === 'm' ? '📚' : cat.items[0]?.id?.charAt(0) === 'p' ? '🎓' : '📖' }} {{ catId }}</span>
+          <span class="text-muted" style="font-size:13px">{{ cat.done }}/{{ cat.total }}</span>
+        </div>
+        <div v-for="req in cat.items" :key="req.id" class="graduation-req-row" style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f0f0f0">
+          <select class="req-status-select" :value="req.status" @change="updateGradReq(req.id, $event.target.value)" style="width:120px">
+            <option value="not_started">⬜ 未开始</option>
+            <option value="in_progress">🔶 进行中</option>
+            <option value="done">✅ 完成</option>
+          </select>
+          <div style="flex:1">
+            <div style="font-weight:500">{{ req.label }}</div>
+            <div class="text-muted" style="font-size:12px">{{ req.detail }} | 权重 {{ req.weight }}</div>
+            <div v-if="req.met_at" class="text-muted" style="font-size:11px">完成日期: {{ req.met_at }}</div>
+          </div>
+          <input v-if="req.status === 'done'" type="text" class="req-notes" v-model="req.notes"
+            @blur="updateGradNotes(req.id, req.notes)" placeholder="备注" style="width:120px;font-size:12px">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  
   <div v-if="activeTab==='agents'" class="agent-view">
     <div class="card-title" style="margin-bottom:12px">EvoTeam Agent 控制中心</div>
     <div class="sub-tab-bar">
@@ -1211,7 +1275,7 @@
 
 
 
-<script src="/js/api.js?v=077"></script>
-<script src="/js/teacher.js?v=077"></script>
+<script src="/js/api.js?v=078"></script>
+<script src="/js/teacher.js?v=078"></script>
 </body>
 </html>

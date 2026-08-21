@@ -597,8 +597,22 @@ status: "on_track"
         interviewStreaming.value = false
       })
     }
+    // ===== 毕业状态 (只读) =====
+    const gradSummary = ref(null)
+
+    async function switchToGraduation() {
+      activeTab.value = 'graduation'
+      window.location.hash = 'graduation'
+      if (!user.value?.id) return
+      try {
+        gradSummary.value = await api('/api/graduation/' + user.value.id)
+      } catch (e) { showToast('加载毕业状态失败: ' + e.message) }
+    }
+
+
 
     return {
+      gradSummary, switchToGraduation,
       user, markdown, previewHtml, submitting, summary, summaryLoading,
       roleLabel, updatePreview, loadTemplate, clearEditor, doSubmit, logout,
       formatMessage,
