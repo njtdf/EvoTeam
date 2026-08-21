@@ -41,6 +41,7 @@ import { loadMemory, updateMemory, accumulateFromReport, accumulateFromChat, acc
 import { createRoom, listRooms, getRoom, addMessage, joinRoom, leaveRoom, deleteRoom, shouldTriggerAI, buildAIContext, addClient, broadcast } from './lib/chatroom.js'
 import { buildStudentContext } from './lib/ai-context.js'
 import { getEntityGraph, buildAllEntities, buildRelations, searchEntities, addRelation, removeRelation, applyNaturalLanguage, getOntologyStats } from './lib/ontology.js'
+import { trigger as flywheelTrigger, buildFlywheelContext, getFlywheelStats, getFlywheelLog } from './lib/flywheel.js'
 import { loadValueCycle, updateValueCycle, loadGroupValueCycle, saveGroupValueCycle, getAllAlignments } from './lib/valuecycle.js'
 import { loadCalendarEvents } from './lib/calendar.js'
 import { searchTrajectories, getTrajectoryStats, listTrajectories } from './lib/trajectory.js'
@@ -249,6 +250,8 @@ app.post('/api/submit', requireAuth, async (req, res) => {
     if (summary && summary.summary) {
       accumulateFromReport(studentId, student.name, content, summary)
     }
+    // Flywheel: report_submitted -> index KB + log trajectory + build context
+    flywheelTrigger('report_submitted', { studentId, reportPath: filePath, content, summary, period: week, studentName: student.name })
   }).catch(e => {
     console.error('[submit] AI summary failed:', e.message)
   })
@@ -570,7 +573,10 @@ app.get('/api/kb/file', requireAuth, (req, res) => {
      return res.status(400).json({ error: 'Meeting content is empty' })
    }
    saveMeeting(date, content)
-   runExtraction(date).catch(e => {
+   runExtraction(date).then(actions => {
+    // Flywheel: meeting_ended -> index KB + log trajectory + build context
+    flywheelTrigger('meeting_ended', { date, minutes: content, actions: actions?.actions || [], decisions: actions?.decisions || [] })
+  }).catch(e => {
      console.error('[meeting] extract failed:', e.message)
       saveActions(date, {
         date,
@@ -714,6 +720,10 @@ app.post('/api/tasks/:id/transition', requireAuth, async (req, res) => {
   if (!newStatus) return res.status(400).json({ error: 'newStatus required' })
   const result = transitionTask(req.params.id, newStatus, evidence || '')
   if (!result.ok) return res.status(400).json(result)
+  // Flywheel: task_done -> log milestone + update project
+  if (result.ok && newStatus === 'done') {
+    flywheelTrigger('task_done', { taskId: req.params.id, ownerId: result.task?.owner_student_id, taskTitle: result.task?.title })
+  }
   res.json(result)
 })
 
@@ -1694,6 +1704,27 @@ app.post('/api/ontology/nl', requireRole('teacher'), (req, res) => {
     const text = req.body.text || '';
     const result = applyNaturalLanguage(text);
     res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
+// ============================================================
+// Flywheel API (Roadmap 2.2 Phase 2)
+// ============================================================
+app.get('/api/flywheel/stats', requireRole('teacher'), (req, res) => {
+  try {
+    res.json(getFlywheelStats());
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/flywheel/log', requireRole('teacher'), (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+    res.json(getFlywheelLog(limit));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

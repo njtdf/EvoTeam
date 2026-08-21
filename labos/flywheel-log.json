@@ -1,0 +1,29 @@
+{
+  "events": [
+    {
+      "event": "task_done",
+      "payload": {
+        "taskId": "T-002"
+      },
+      "started_at": "2026-08-21T12:57:10.493Z",
+      "steps": [
+        {
+          "name": "log_milestone",
+          "status": "ok",
+          "result": {
+            "logged": true
+          }
+        },
+        {
+          "name": "update_project_progress",
+          "status": "ok",
+          "result": {
+            "project_notified": true
+          }
+        }
+      ],
+      "status": "ok",
+      "completed_at": "2026-08-21T12:57:10.526Z"
+    }
+  ]
+}

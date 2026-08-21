@@ -1,0 +1,16 @@
+{
+  "trajectory_id": "traj-20260821-s02-001",
+  "actor_type": "student",
+  "actor_id": "s02",
+  "session_type": "task_completion",
+  "timestamp": "2026-08-21T12:57:10.493Z",
+  "messages": [],
+  "outcome": "completed task: progress stalled",
+  "extracted_skills": [],
+  "tags": [
+    "任务完成",
+    "flywheel",
+    "T-002",
+    "s02"
+  ]
+}
