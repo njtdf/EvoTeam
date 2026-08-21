@@ -8,7 +8,7 @@
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<link rel="stylesheet" href="/css/app.css?v=0715">
+<link rel="stylesheet" href="/css/app.css?v=0716">
 </head>
 <body>
 <div id="app">
@@ -32,6 +32,7 @@
         <a class="sidebar-nav-item" :class="{active:activeTab==='kanban'}" @click="switchToKanban"><span class="nav-icon">📋</span> 任务</a>
         <a class="sidebar-nav-item" :class="{active:activeTab==='revision'}" @click="switchToRevision"><span class="nav-icon">✍️</span> 修改</a>
         <a class="sidebar-nav-item" :class="{active:activeTab==='graduation'}" @click="switchToGraduation"><span class="nav-icon">🎓</span> 毕业</a>
+      <a class="sidebar-nav-item" :class="{active:activeTab==='profile'}" @click="switchToProfile"><span class="nav-icon">📊</span> 学生档案</a>
         <div class="sidebar-nav-section">Agent</div>
         <a class="sidebar-nav-item" :class="{active:activeTab==='agents'}" @click="switchToAgents"><span class="nav-icon">🤖</span> 实时状态</a>
         <div class="sidebar-nav-section">科研工具</div>
@@ -104,25 +105,36 @@
       </div>
     </div>
 
+    <!-- Lab Graduation Progress -->
+    <div class="lab-progress-section" v-if="labProgress">
+      <div class="lab-progress-header">
+        <span class="lab-progress-title">🎓 毕业进度</span>
+        <div class="lab-progress-stats">
+          <span>在读 {{ labProgress.enrolled }} | 已毕业 {{ labProgress.graduated }} | 风险 {{ labProgress.at_risk }}</span>
+        </div>
+      </div>
+      <div class="progress-bar-label">
+        <span>课题组平均进度</span>
+        <span>{{ labProgress.avg_progress }}%</span>
+      </div>
+      <div class="lab-progress-bar-bg">
+        <div class="lab-progress-bar-fill" :style="{width: (labProgress.avg_progress || 0) + '%'}"></div>
+      </div>
+      <div class="lab-progress-students">
+        <div class="lab-progress-student-chip" v-for="p in (labProgress.profiles || []).slice(0,15)" :key="p.id" @click="goToStudent(p.id)">
+          {{ p.name }}
+          <div class="lab-progress-student-bar">
+            <div class="lab-progress-student-bar-fill" :style="{width: p.progress + '%', background: p.risk === 'high' ? '#ef4444' : p.risk === 'medium' ? '#f59e0b' : '#10b981'}"></div>
+          </div>
+          {{ p.progress }}%
+        </div>
+      </div>
+    </div>
+
 <!-- 可滚动主区域 -->
     <div class="kn-scroll-area">
 
-            <!-- Consistency Index (言行一致指数) -->
-      <div class="kn-section consistency-section" v-if="consistencyData.length > 0">
-        <div class="kn-section-label">🎯 言行一致指数</div>
-        <div class="consistency-grid">
-          <div class="consistency-card" v-for="s in consistencyData" :key="s.id" @click="goToStudent(s.id)" style="cursor:pointer">
-            <div class="consistency-name">{{ s.name }}</div>
-            <div class="consistency-ring" :class="'rating-' + s.rating">{{ s.consistency_pct }}%</div>
-            <div class="consistency-detail">{{ s.fulfilled }}/{{ s.total }} fulfilled · {{ s.overdue }} overdue</div>
-            <div class="consistency-bar-bg">
-              <div class="consistency-bar-fill" :style="{width: s.consistency_pct + '%', background: s.consistency_pct >= 70 ? '#16a34a' : s.consistency_pct >= 50 ? '#d97706' : '#dc2626'}"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 分区1: 今日任务 (compact) -->
+            <!-- 分区1: 今日任务 (compact) -->
       <div class="kn-section" v-if="!activeAgentId">
         <div class="kn-section-label">📋 今日任务</div>
         <div class="kn-todo-mini">
@@ -496,6 +508,9 @@
              </select>
              <button class="btn btn-sm btn-secondary" @click.stop="deleteTask(t.task_id)" v-if="user && user.role==='teacher'">删</button>
              <button class="btn btn-sm btn-secondary" v-if="t.status==='blocked'" @click.stop="goToSkill('idea-evaluator')">💡 评估方向</button>
+           </div>
+           <div class="task-progress-mini">
+             <div class="task-progress-mini-fill" :style="{width: taskStatusPct(t.status) + '%', background: t.status === 'done' ? '#10b981' : t.status === 'in_progress' ? '#3b82f6' : '#d1d5db'}"></div>
            </div>
          </div>
           <div v-if="tasksByStatus(col.status).length === 0" class="empty-state" style="padding:16px">无</div>
@@ -1456,13 +1471,136 @@
     </div>
   </div>
 
+      <!-- Student Profile Page -->
+      <div v-if="activeTab==='profile'">
+        <div class="dashboard-toolbar" style="justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h2 style="font-size:18px;font-weight:700">学生档案</h2>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="header-btn" :class="{active:profileFilter==='all'}" @click="profileFilter='all'" style="font-size:12px;padding:4px 10px">全部</button>
+            <button class="header-btn" :class="{active:profileFilter==='enrolled'}" @click="profileFilter='enrolled'" style="font-size:12px;padding:4px 10px">在读</button>
+            <button class="header-btn" :class="{active:profileFilter==='graduated'}" @click="profileFilter='graduated'" style="font-size:12px;padding:4px 10px">已毕业</button>
+          </div>
+        </div>
+
+        <div v-if="profileLoading" class="loading">加载中...</div>
+        <div class="profile-grid" v-else>
+          <div class="profile-card" v-for="s in filteredProfiles" :key="s.id" @click="openProfile(s.id)">
+            <div class="profile-card-header">
+              <span class="profile-card-name">{{ s.name }}</span>
+              <span class="profile-card-id">{{ s.id }}</span>
+              <span class="profile-status-badge" :class="s.enrollment_status">{{ s.enrollment_status === 'enrolled' ? '在读' : '已毕业' }}</span>
+            </div>
+            <div class="profile-card-project">{{ s.project }}</div>
+            <div class="profile-mini-progress">
+              <div class="profile-mini-progress-label"><span>🎓 毕业</span><span>{{ s.graduation_progress }}%</span></div>
+              <div class="profile-mini-bar-bg"><div class="profile-mini-bar-fill" :style="{width: s.graduation_progress + '%', background: s.risk_level === 'high' ? '#ef4444' : s.risk_level === 'medium' ? '#f59e0b' : '#10b981'}"></div></div>
+            </div>
+            <div class="profile-mini-progress">
+              <div class="profile-mini-progress-label"><span>📋 任务</span><span>{{ s.task_done }}/{{ s.task_total }}</span></div>
+              <div class="profile-mini-bar-bg"><div class="profile-mini-bar-fill" :style="{width: s.task_progress + '%', background: '#4f46e5'}"></div></div>
+            </div>
+            <div class="profile-mini-progress" v-if="s.consistency_rating !== 'no_data'">
+              <div class="profile-mini-progress-label"><span>🎯 言行一致</span><span>{{ s.consistency_pct }}% ({{ s.consistency_rating }})</span></div>
+              <div class="profile-mini-bar-bg"><div class="profile-mini-bar-fill" :style="{width: s.consistency_pct + '%', background: s.consistency_pct >= 70 ? '#16a34a' : s.consistency_pct >= 50 ? '#d97706' : '#dc2626'}"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profile Detail Modal -->
+      <div class="modal-overlay" v-if="showProfileDetail" @click.self="closeProfileDetail">
+        <div class="modal-card profile-detail-modal">
+          <div v-if="profileDetailLoading" class="loading">加载中...</div>
+          <div v-else-if="profileDetail">
+            <div class="profile-detail-header">
+              <span class="profile-detail-name">{{ profileDetail.student.name }}</span>
+              <span class="profile-detail-id">{{ profileDetail.student.id }}</span>
+              <span class="profile-status-badge" :class="profileDetail.student.enrollment_status">{{ profileDetail.student.enrollment_status === 'enrolled' ? '在读' : '已毕业' }}</span>
+              <button class="header-btn" @click="closeProfileDetail" style="margin-left:auto;font-size:12px">关闭</button>
+            </div>
+
+            <!-- Graduation Progress -->
+            <div class="profile-detail-section" v-if="profileDetail.graduation">
+              <div class="profile-detail-section-title">🎓 毕业进度</div>
+              <div class="progress-bar-label">
+                <span>{{ profileDetail.graduation.degree }} | 风险: {{ profileDetail.graduation.risk_level }}</span>
+                <span>{{ profileDetail.graduation.progress_pct }}%</span>
+              </div>
+              <div class="progress-bar-large">
+                <div class="progress-bar-large-fill" :style="{width: profileDetail.graduation.progress_pct + '%', background: profileDetail.graduation.risk_level === 'high' ? '#ef4444' : profileDetail.graduation.risk_level === 'medium' ? '#f59e0b' : '#10b981'}"></div>
+              </div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:8px">
+                <span v-for="r in profileDetail.graduation.requirements.slice(0,6)" :key="r.id" style="display:inline-block;margin-right:8px">
+                  {{ r.status === 'done' ? '✅' : r.status === 'in_progress' ? '🔘' : '⬜' }} {{ r.label }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Tasks -->
+            <div class="profile-detail-section">
+              <div class="profile-detail-section-title">📋 任务概览</div>
+              <div class="progress-bar-label">
+                <span>完成 {{ profileDetail.tasks.done }}/总 {{ profileDetail.tasks.total }} | 逾期 {{ profileDetail.tasks.overdue }}</span>
+                <span>{{ profileDetail.tasks.progress_pct }}%</span>
+              </div>
+              <div class="progress-bar-large">
+                <div class="progress-bar-large-fill" :style="{width: profileDetail.tasks.progress_pct + '%', background: '#4f46e5'}"></div>
+              </div>
+              <div style="display:flex;gap:12px;font-size:12px;color:var(--text-muted);margin-top:6px">
+                <span>待办 {{ profileDetail.tasks.todo }}</span>
+                <span>进行中 {{ profileDetail.tasks.in_progress }}</span>
+                <span>阻塞 {{ profileDetail.tasks.blocked }}</span>
+              </div>
+            </div>
+
+            <!-- Capability -->
+            <div class="profile-detail-section" v-if="profileDetail.capability">
+              <div class="profile-detail-section-title">💡 能力画像</div>
+              <div class="capability-bars">
+                <div class="capability-bar-row" v-for="cap in Object.entries(profileDetail.capability).filter(([k]) => k !== '__proto__')" :key="cap[0]">
+                  <span class="capability-bar-label">{{ ({modeling:'建模',experiment:'实验',writing:'写作',coding:'编程',presentation:'表达',literature:'文献',independence:'独立性'})[cap[0]] || cap[0] }}</span>
+                  <div class="capability-bar-track"><div class="capability-bar-fill" :style="{width: (cap[1] / 5 * 100) + '%', background: cap[1] >= 4 ? '#16a34a' : cap[1] >= 3 ? '#3b82f6' : cap[1] >= 2 ? '#d97706' : '#dc2626'}"></div></div>
+                  <span class="capability-bar-value">{{ cap[1] }}/5</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Consistency -->
+            <div class="profile-detail-section" v-if="profileDetail.consistency && profileDetail.consistency.total > 0">
+              <div class="profile-detail-section-title">🎯 言行一致指数</div>
+              <div class="progress-bar-label">
+                <span>兑现 {{ profileDetail.consistency.fulfilled }}/{{ profileDetail.consistency.total }} | 逾期 {{ profileDetail.consistency.overdue }}</span>
+                <span>{{ profileDetail.consistency.consistency_pct }}% (评级 {{ profileDetail.consistency.rating }})</span>
+              </div>
+              <div class="progress-bar-large">
+                <div class="progress-bar-large-fill" :style="{width: profileDetail.consistency.consistency_pct + '%', background: profileDetail.consistency.consistency_pct >= 70 ? '#16a34a' : profileDetail.consistency.consistency_pct >= 50 ? '#d97706' : '#dc2626'}"></div>
+              </div>
+            </div>
+
+            <!-- Reports -->
+            <div class="profile-detail-section">
+              <div class="profile-detail-section-title">📝 周报 & 会议</div>
+              <div style="font-size:13px;color:var(--text-secondary)">
+                <span v-if="profileDetail.report.has_summary">AI总结: {{ (profileDetail.report.summary_text || '').slice(0,80) }}...</span>
+                <span v-else>暂无周报总结</span>
+                <span style="margin-left:12px">会议行动项: {{ profileDetail.meetings.action_count }}</span>
+                <span style="margin-left:12px">知识库文档: {{ profileDetail.knowledge.doc_count }}</span>
+              </div>
+              <div v-if="profileDetail.report.risks.length > 0" style="margin-top:6px;font-size:12px;color:#ef4444">
+                ⚠ 风险: {{ profileDetail.report.risks.join(', ') }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
 </main>
    </div>
  </div>
 
 
 
-<script src="/js/api.js?v=0715"></script>
-<script src="/js/teacher.js?v=0715"></script>
+<script src="/js/api.js?v=0716"></script>
+<script src="/js/teacher.js?v=0716"></script>
 </body>
 </html>

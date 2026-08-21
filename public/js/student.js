@@ -633,6 +633,32 @@ status: "on_track"
 
 
 
+    // ===== 我的档案 =====
+    const myProfile = ref(null)
+    const profileLoading = ref(false)
+    const capabilityLabels = {
+      modeling: '建模', experiment: '实验', writing: '写作', coding: '编程',
+      presentation: '表达', literature: '文献', independence: '独立性'
+    }
+
+    async function switchToProfile() {
+      activeTab.value = 'profile'
+      await loadMyProfile()
+    }
+
+    async function loadMyProfile() {
+      if (!user.value) return
+      profileLoading.value = true
+      try {
+        const res = await api('/api/student-profile/' + user.value.student_id)
+        myProfile.value = res
+      } catch(e) {
+        console.error('Profile load error:', e)
+      }
+      profileLoading.value = false
+    }
+
+
     return {
       gradSummary, switchToGraduation,
       user, markdown, previewHtml, submitting, summary, summaryLoading,
@@ -666,6 +692,8 @@ status: "on_track"
       kbFiles, kbSearch, kbLoading, kbFilteredFiles,
       kbViewingFile, kbViewingFileName, kbFileContent, kbSemQuery, kbSemResults, kbSemLoading, kbSemStats, semSearchKb, loadKbStats,
       loadKb, viewKbFile, switchToKb,
+      // 我的档案
+      myProfile, profileLoading, switchToProfile, capabilityLabels,
     }
   },
 }).mount('#app')

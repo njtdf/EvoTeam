@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EvoTeam - Student</title>
-<link rel="stylesheet" href="/css/app.css?v=0715">
+<link rel="stylesheet" href="/css/app.css?v=0716">
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -21,6 +21,7 @@
         <a class="sidebar-nav-item" :class="{active:activeTab==='kanban'}" @click="switchToKanban"><span class="nav-icon">📋</span> 任务</a>
         <a class="sidebar-nav-item" :class="{active:activeTab==='calendar'}" @click="switchToCalendar"><span class="nav-icon">📅</span> 日历</a>
         <a class="sidebar-nav-item" :class="{active:activeTab==='kb'}" @click="switchToKb"><span class="nav-icon">📚</span> 知识库</a>
+        <a class="sidebar-nav-item" :class="{active:activeTab==='profile'}" @click="switchToProfile"><span class="nav-icon">📊</span> 我的档案</a>
         <div class="sidebar-nav-section">Agent</div>
         <a class="sidebar-nav-item" :class="{active:activeTab==='assistant'}" @click="switchToAssistant"><span class="nav-icon">🤖</span> AI 助手</a>
         <div class="sidebar-nav-section">科研工具</div>
@@ -372,10 +373,84 @@
       </div>
     </div>
   </div>
-    </main>
+    
+  <!-- 我的档案 Tab -->
+  <div v-if="activeTab==='profile'" class="content-section">
+    <div v-if="profileLoading" class="loading">加载中...</div>
+    <div v-else-if="myProfile" class="profile-detail-modal" style="position:static;max-width:none;width:100%">
+      <h2 style="margin-bottom:16px">📊 我的档案</h2>
+      <div class="profile-card" v-if="myProfile.graduation">
+        <h3>🎓 毕业进度</h3>
+        <div class="profile-status-badge" :class="'status-' + (myProfile.graduation.risk_level || 'unknown')">
+          {{ myProfile.graduation.degree || '研究生' }} | 风险: {{ myProfile.graduation.risk_level || '未知' }}
+        </div>
+        <div class="progress-bar-large">
+          <div class="progress-bar-large-fill" :style="{width: (myProfile.graduation.progress_pct || 0) + '%', background: myProfile.graduation.risk_level === 'high' ? '#ef4444' : myProfile.graduation.risk_level === 'medium' ? '#f59e0b' : '#10b981'}">
+            {{ myProfile.graduation.progress_pct || 0 }}%
+          </div>
+        </div>
+        <div v-if="myProfile.graduation.requirements && myProfile.graduation.requirements.length" style="margin-top:12px">
+          <div v-for="req in myProfile.graduation.requirements" :key="req.name" style="display:flex;align-items:center;gap:8px;margin:4px 0">
+            <span :style="{color: req.done ? '#10b981' : '#999'}">{{ req.done ? '✅' : '⬜' }}</span>
+            <span>{{ req.name }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="profile-card" v-if="myProfile.tasks">
+        <h3>📋 任务进度</h3>
+        <div style="display:flex;gap:12px;margin-bottom:8px">
+          <span class="stat-pill">总任务: {{ myProfile.tasks.total || 0 }}</span>
+          <span class="stat-pill" style="background:#3b82f6;color:#fff">进行中: {{ myProfile.tasks.in_progress || 0 }}</span>
+          <span class="stat-pill" style="background:#10b981;color:#fff">已完成: {{ myProfile.tasks.done || 0 }}</span>
+          <span class="stat-pill" style="background:#f59e0b;color:#fff">待办: {{ myProfile.tasks.todo || 0 }}</span>
+          <span class="stat-pill" style="background:#ef4444;color:#fff">阻塞: {{ myProfile.tasks.blocked || 0 }}</span>
+        </div>
+        <div class="progress-bar-large" v-if="myProfile.tasks.total > 0">
+          <div class="progress-bar-large-fill" :style="{width: ((myProfile.tasks.done || 0) / myProfile.tasks.total * 100) + '%', background: '#10b981'}">
+            {{ Math.round((myProfile.tasks.done || 0) / myProfile.tasks.total * 100) }}%
+          </div>
+        </div>
+      </div>
+      <div class="profile-card" v-if="myProfile.capability">
+        <h3>💪 能力画像</h3>
+        <div class="capability-bars">
+          <div v-for="(val, key) in myProfile.capability" :key="key" class="capability-bar-row">
+            <span class="capability-bar-label">{{ capabilityLabels[key] || key }}</span>
+            <div class="capability-bar">
+              <div class="capability-bar-fill" :style="{width: (val / 5 * 100) + '%', background: val >= 4 ? '#10b981' : val >= 2 ? '#f59e0b' : '#ef4444'}"></div>
+            </div>
+            <span class="capability-bar-score">{{ val }}/5</span>
+          </div>
+        </div>
+      </div>
+      <div class="profile-card" v-if="myProfile.consistency">
+        <h3>📝 言行一致指数</h3>
+        <div style="display:flex;gap:12px">
+          <span class="stat-pill">承诺: {{ myProfile.consistency.total_promises || 0 }}</span>
+          <span class="stat-pill" style="background:#10b981;color:#fff">已兑现: {{ myProfile.consistency.fulfilled || 0 }}</span>
+          <span class="stat-pill" style="background:#ef4444;color:#fff">逾期: {{ myProfile.consistency.overdue || 0 }}</span>
+          <span class="stat-pill" v-if="myProfile.consistency.total_promises > 0">
+            兑现率: {{ Math.round(myProfile.consistency.fulfilled / myProfile.consistency.total_promises * 100) }}%
+          </span>
+        </div>
+      </div>
+      <div class="profile-card">
+        <h3>📚 知识库 & 数据</h3>
+        <div style="display:flex;gap:12px">
+          <span class="stat-pill">周报: {{ myProfile.report_count || 0 }}</span>
+          <span class="stat-pill">会议记录: {{ myProfile.meeting_count || 0 }}</span>
+          <span class="stat-pill">知识文档: {{ myProfile.kb_count || 0 }}</span>
+          <span class="stat-pill">决策记录: {{ myProfile.decision_count || 0 }}</span>
+        </div>
+      </div>
+    </div>
+    <div v-else class="empty-state">暂无档案数据</div>
+  </div>
+
+</main>
   </div>
 </div>
-<script src="/js/api.js?v=0715"></script>
-<script src="/js/student.js?v=0715"></script>
+<script src="/js/api.js?v=0716"></script>
+<script src="/js/student.js?v=0716"></script>
 </body>
 </html>

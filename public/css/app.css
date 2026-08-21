@@ -306,11 +306,11 @@ body {
 /* --- Student selector --- */
 .student-select {
   padding: 6px 12px;
-  border: none;
+  border: 1px solid var(--border);
   border-radius: 4px;
   font-size: 13px;
-  background: rgba(255,255,255,0.2);
-  color: #fff;
+  background: var(--card);
+  color: var(--text);
   cursor: pointer;
   outline: none;
 }
@@ -1570,3 +1570,53 @@ body {
   font-size: 12px;
   color: #6b7280;
 }
+
+
+/* === Student Profile + Progress Bars === */
+
+.profile-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; margin-bottom:20px; }
+.profile-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px; cursor:pointer; transition:box-shadow .15s,transform .1s; }
+.profile-card:hover { box-shadow:0 4px 12px rgba(0,0,0,.1); transform:translateY(-1px); }
+.profile-card-header { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.profile-card-name { font-weight:700; font-size:15px; }
+.profile-card-id { font-size:12px; color:var(--text-muted); }
+.profile-status-badge { font-size:10px; padding:1px 6px; border-radius:4px; font-weight:600; }
+.profile-status-badge.enrolled { background:#dbeafe; color:#1e40af; }
+.profile-status-badge.graduated { background:#dcfce7; color:#166534; }
+.profile-card-project { font-size:12px; color:var(--text-secondary); margin-bottom:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.profile-mini-progress { margin:6px 0; }
+.profile-mini-progress-label { display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted); margin-bottom:2px; }
+.profile-mini-bar-bg { height:5px; background:var(--border-light); border-radius:3px; overflow:hidden; }
+.profile-mini-bar-fill { height:100%; border-radius:3px; transition:width .3s; }
+
+.profile-detail-modal { max-width:700px; max-height:90vh; overflow-y:auto; }
+.profile-detail-header { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+.profile-detail-name { font-size:20px; font-weight:800; }
+.profile-detail-id { font-size:14px; color:var(--text-muted); }
+.profile-detail-section { border-top:1px solid var(--border-light); padding:14px 0; }
+.profile-detail-section-title { font-size:14px; font-weight:700; margin-bottom:8px; }
+
+.progress-bar-large { height:12px; background:var(--border-light); border-radius:6px; overflow:hidden; margin:8px 0; }
+.progress-bar-large-fill { height:100%; border-radius:6px; transition:width .4s; }
+.progress-bar-label { display:flex; justify-content:space-between; font-size:12px; color:var(--text-secondary); margin-bottom:4px; }
+
+.task-progress-mini { height:4px; background:var(--border-light); border-radius:2px; overflow:hidden; margin-top:4px; }
+.task-progress-mini-fill { height:100%; border-radius:2px; transition:width .3s; }
+
+.capability-bars { display:grid; gap:6px; }
+.capability-bar-row { display:flex; align-items:center; gap:8px; }
+.capability-bar-label { font-size:12px; color:var(--text-secondary); min-width:60px; }
+.capability-bar-track { flex:1; height:8px; background:var(--border-light); border-radius:4px; overflow:hidden; }
+.capability-bar-fill { height:100%; border-radius:4px; transition:width .3s; }
+.capability-bar-value { font-size:12px; color:var(--text-muted); min-width:20px; text-align:right; }
+
+.lab-progress-section { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px; margin-bottom:12px; }
+.lab-progress-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.lab-progress-title { font-weight:700; font-size:14px; }
+.lab-progress-stats { display:flex; gap:12px; font-size:12px; color:var(--text-secondary); }
+.lab-progress-bar-bg { height:16px; background:var(--border-light); border-radius:8px; overflow:hidden; margin:8px 0; }
+.lab-progress-bar-fill { height:100%; border-radius:8px; background:linear-gradient(90deg,#4f46e5,#7c3aed); transition:width .4s; }
+.lab-progress-students { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.lab-progress-student-chip { display:flex; align-items:center; gap:4px; font-size:11px; padding:2px 8px; border-radius:4px; background:var(--border-light); cursor:pointer; }
+.lab-progress-student-bar { width:40px; height:4px; background:var(--border); border-radius:2px; overflow:hidden; }
+.lab-progress-student-bar-fill { height:100%; border-radius:2px; }

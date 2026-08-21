@@ -48,6 +48,18 @@ createApp({
    const overduePromises = ref([])
    const upcomingPromises = ref([])
    const showPromisePanel = ref(false)
+   // Phase 5: Student Profile
+   const profileFilter = ref('all')
+   const profileList = ref([])
+   const profileLoading = ref(false)
+   const profileDetail = ref(null)
+   const showProfileDetail = ref(false)
+   const profileDetailLoading = ref(false)
+   const labProgress = ref(null)
+   const filteredProfiles = Vue.computed(() => {
+     if (profileFilter.value === 'all') return profileList.value
+     return profileList.value.filter(s => s.enrollment_status === profileFilter.value)
+   })
 
    const kanbanCols = [
       { status: 'todo', label: '待办' },
@@ -367,10 +379,47 @@ createApp({
       } catch (e) { showToast('操作失败: ' + e.message) }
     }
 
+async function switchToProfile() {
+      activeTab.value = 'profile'
+      await loadProfileList()
+    }
+
+    async function loadProfileList() {
+      profileLoading.value = true
+      try {
+        const data = await api('/api/student-profiles')
+        profileList.value = data.students || []
+      } catch (e) { showToast('加载学生档案失败: ' + e.message) }
+      finally { profileLoading.value = false }
+    }
+
+    async function openProfile(studentId) {
+      showProfileDetail.value = true
+      profileDetailLoading.value = true
+      profileDetail.value = null
+      try {
+        const data = await api('/api/student-profile/' + studentId)
+        profileDetail.value = data
+      } catch (e) { showToast('加载档案失败: ' + e.message) }
+      finally { profileDetailLoading.value = false }
+    }
+
+    function closeProfileDetail() {
+      showProfileDetail.value = false
+      profileDetail.value = null
+    }
+
+    async function loadLabProgress() {
+      try {
+        labProgress.value = await api('/api/lab-progress')
+      } catch (e) { console.error('loadLabProgress error:', e.message) }
+    }
+
 async function switchToDashboard() {
       activeTab.value = 'dashboard'
       await Promise.all([loadDashboard(), loadTeamFeed()])
       await loadTodayTasks()
+      await loadLabProgress()
       await loadPromiseData()
     }
 
@@ -1406,6 +1455,12 @@ async function switchToDashboard() {
   function kbNextPage() { if (kbPage.value < kbTotalPages.value) { kbPage.value++; loadKbDocuments() } }
   function kbPrevPage() { if (kbPage.value > 1) { kbPage.value--; loadKbDocuments() } }
 
+    // Task status to percentage for progress bar
+    function taskStatusPct(status) {
+      const map = { todo: 0, in_progress: 50, done: 100, blocked: 30 }
+      return map[status] || 0
+    }
+
 return {
       gradStudentId, gradSummary, switchToGraduation, loadGraduation, updateGradReq, updateGradNotes, seedGraduation,
       user, students, selectedStudentId, report, summary, chatMessages,
@@ -1430,11 +1485,16 @@ return {
       uploadMeeting, loadMeeting, onOwnerChange, saveActions,
       // 看板
       tasks, boardStats, news, newsError, showTaskModal, newTask, kanbanCols,
-     switchToKanban, loadTasks, loadBoardStats, loadNews, tasksByStatus,
+     switchToKanban,
+      taskStatusPct, loadTasks, loadBoardStats, loadNews, tasksByStatus,
      isOverdue, createTask, updateTaskStatus, deleteTask, promoteToKanban,
      taskDetail, showTaskDetail, taskDetailLoading, openTaskDetail, closeTaskDetail,
      // Phase 4: Promise Ledger
      promiseStats, consistencyData, overduePromises, upcomingPromises, showPromisePanel,
+     // Phase 5: Student Profile
+     profileFilter, profileList, profileLoading, profileDetail, showProfileDetail, profileDetailLoading,
+     labProgress, filteredProfiles,
+     switchToProfile, loadProfileList, openProfile, closeProfileDetail, loadLabProgress,
      loadPromiseData, fulfillPromiseAction,
      // AI 工具箱
       skillManifest, selectedSkill, skillInput, skillOutput, skillStreaming,

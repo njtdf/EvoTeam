@@ -55,6 +55,7 @@ import { createDecision, listDecisions, getDecision, updateDecision, deleteDecis
 
 import { canTransition, getValidTransitions, transitionTask } from './lib/kanban.js'
 import { createPromise, getPromises, fulfillPromise, getOverduePromises, getUpcomingDeadlines, getConsistencyIndex, getAllConsistencyIndices, getGoalTree, autoExtractFromMeeting, getPromiseStats, markOverdue, getPromiseUrgency } from './lib/promise-ledger.js'
+import { getStudentProfile, getAllStudentProfiles, getLabGraduationProgress, taskStatusToPct } from './lib/student-profile.js'
 import { getLabState, recordReward, getRewards, getLabRewardSummary, deleteReward } from './lib/lab-state.js'
 import { recordEvent, recordFromNews, recordFromEmails, getUnprocessed, markProcessed, getRecentEvents, buildExternalContext, getEventStats } from './lib/external-events.js'
 import { extractFromAllTrajectories, listExtractedSkills, searchSkills, getSkillStats } from './lib/skill-extractor.js'
@@ -863,6 +864,22 @@ app.get('/api/tasks/:id/detail', requireAuth, (req, res) => {
   res.json(detail)
 })
 
+
+// --- API: Student Profile (aggregated data) ---
+
+app.get('/api/student-profiles', requireRole('teacher'), (req, res) => {
+  res.json({ students: getAllStudentProfiles() })
+})
+
+app.get('/api/student-profile/:id', requireAuth, (req, res) => {
+  const profile = getStudentProfile(req.params.id)
+  if (!profile) return res.status(404).json({ error: 'Student not found' })
+  res.json(profile)
+})
+
+app.get('/api/lab-progress', requireAuth, (req, res) => {
+  res.json(getLabGraduationProgress())
+})
 
 // --- API: Promise Ledger (Li Kaifu execution closed-loop engine) ---
 
