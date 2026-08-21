@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-21T04:14:07.259Z",
+  "timestamp": "2026-08-21T05:02:30.545Z",
   "students": {
     "total": 15,
     "by_role": {
@@ -11,8 +11,8 @@
     "total": 40,
     "by_status": {
       "todo": 36,
-      "in_progress": 1,
-      "done": 3,
+      "in_progress": 2,
+      "done": 2,
       "blocked": 0
     },
     "overdue": 0
@@ -22,8 +22,16 @@
     "missing": 3
   },
   "rewards": {
-    "total": 0,
-    "recent": []
+    "total": 1,
+    "recent": [
+      {
+        "reward_id": "R-1787285664830",
+        "student_id": "s01",
+        "signal": "paper_accepted",
+        "context": "IEEE TPS submitted",
+        "timestamp": "2026-08-21T04:14:24.830Z"
+      }
+    ]
   },
   "risks": [
     {
@@ -152,5 +160,5 @@
       "risk": "resource shortage: 需要更多OpenDSS学习资源"
     }
   ],
-  "summary": "15 students | 12/15 reported | 40 tasks (0 overdue) | 0 rewards"
+  "summary": "15 students | 12/15 reported | 40 tasks (0 overdue) | 1 rewards"
 }

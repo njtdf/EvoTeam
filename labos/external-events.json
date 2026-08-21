@@ -1,0 +1,282 @@
+[
+  {
+    "event_id": "E-1787288414724",
+    "source": "rss",
+    "type": "news",
+    "title": "Active Inference as Context Acquisition for AI Agents",
+    "content": "",
+    "url": "https://arxiv.org/abs/2608.19202",
+    "relevance": "medium",
+    "tags": [
+      "daily_digest"
+    ],
+    "timestamp": "2026-08-21T05:00:14.724Z",
+    "processed": false
+  },
+  {
+    "event_id": "E-1787288414733",
+    "source": "rss",
+    "type": "news",
+    "title": "Robust Metaheuristics under Uncertainty for Berth Allocation and Quay Crane Assignment: A Review",
+    "content": "",
+    "url": "https://arxiv.org/abs/2608.19214",
+    "relevance": "medium",
+    "tags": [
+      "daily_digest"
+    ],
+    "timestamp": "2026-08-21T05:00:14.733Z",
+    "processed": false
+  },
+  {
+    "event_id": "E-1787288414744",
+    "source": "rss",
+    "type": "news",
+    "title": "How to Navigate Uncertainty About AI Consciousness",
+    "content": "",
+    "url": "https://arxiv.org/abs/2608.19215",
+    "relevance": "medium",
+    "tags": [
+      "daily_digest"
+    ],
+    "timestamp": "2026-08-21T05:00:14.744Z",
+    "processed": false
+  },
+  {
+    "event_id": "E-1787288414751",
+    "source": "rss",
+    "type": "news",
+    "title": "Bounded Sovereignty and the Control Tax: Pricing AI Oversight When the Deployer Does Not Own the Model",
+    "content": "",
+    "url": "https://arxiv.org/abs/2608.19216",
+    "relevance": "medium",
+    "tags": [
+      "daily_digest"
+    ],
+    "timestamp": "2026-08-21T05:00:14.751Z",
+    "processed": false
+  },
+  {
+    "event_id": "E-1787288414763",
+    "source": "rss",
+    "type": "news",
+    "title": "Interaction valence reveals contrasting social networks in dairy cattle",
+    "content": "",
+    "url": "https://arxiv.org/abs/2608.19222",
+    "relevance": "medium",
+    "tags": [
+      "daily_digest"
+    ],
+    "timestamp": "2026-08-21T05:00:14.763Z",
+    "processed": false
+  },
+  {
+    "event_id": "E-1787288414772",
+    "source": "rss",
+    "type": "news",
+    "title": "Air Traffic Control Using Large Language Models: Prompt Engineering, Architecture, and Evaluation",
+    "content": "",
+    "url": "https://arxiv.org/abs/2608.19299",
+    "relevance": "medium",
+    "tags": [
+      "daily_digest"
+    ],
+    "timestamp": "2026-08-21T05:00:14.772Z",
+    "processed": false
+  },
+  {
+    "event_id": "E-1787288414784",
+    "source": "rss",
+    "type": "news",
+    "title": "Outcome Monitors: Recovery Affordances for Silent Tool Failures",
+    "content": "",
+    "url": "https://arxiv.org/abs/2608.19303",
+    "relevance": "medium",
+    "tags": [
+      "daily_digest"
+    ],
+    "timestamp": "2026-08-21T05:00:14.784Z",
+    "processed": false
+  },
+  {
+    "event_id": "E-1787288414794",
+    "source": "rss",
+    "type": "news",
+    "title": "Beyond Imitation: Filtering On-Policy Distillation by Reasoning Progress",
+    "content": "",
+    "url": "https://arxiv.org/abs/2608.19408",
+    "relevance": "medium",
+    "tags": [
+      "daily_digest"
+    ],
+    "timestamp": "2026-08-21T05:00:14.794Z",
+    "processed": false
+  },
+  {
+    "event_id": "E-1787288414811",
+    "source": "rss",
+    "type": "news",
+    "title": "Symposium: Trust via Auditable Records for Communities of AI Scientist Agents",
+    "content": "",
+    "url": "https://arxiv.org/abs/2608.19511",
+    "relevance": "medium",
+    "tags": [
+      "daily_digest"
+    ],
+    "timestamp": "2026-08-21T05:00:14.811Z",
+    "processed": false
+  },
+  {
+    "event_id": "E-1787288414822",
+    "source": "rss",
+    "type": "news",
+    "title": "From Retrieved Context to Runtime Control: Adaptive Compression for Edge-based RAG",
+    "content": "",
+    "url": "https://arxiv.org/abs/2608.19535",
+    "relevance": "medium",
+    "tags": [
+      "daily_digest"
+    ],
+    "timestamp": "2026-08-21T05:00:14.822Z",
+    "processed": false
+  },
+  {
+    "event_id": "E-1787288414832",
+    "source": "rss",
+    "type": "news",
+    "title": "Enforcing LLM Safety through DMD-based Classification of Prompt-Response Embedding Dynamics",
+    "content": "",
+    "url": "https://arxiv.org/abs/2608.19579",
+    "relevance": "medium",
+    "tags": [
+      "daily_digest"
+    ],
+    "timestamp": "2026-08-21T05:00:14.832Z",
+    "processed": false
+  },
+  {
+    "event_id": "E-1787288414845",
+    "source": "rss",
+    "type": "news",
+    "title": "Scientific Data Skills: Enabling Agent-Ready Scientific Data Services at Scale",
+    "content": "",
+    "url": "https://arxiv.org/abs/2608.19625",
+    "relevance": "medium",
+    "tags": [
+      "daily_digest"
+    ],
+    "timestamp": "2026-08-21T05:00:14.845Z",
+    "processed": false
+  },
+  {
+    "event_id": "E-1787288414857",
+    "source": "rss",
+    "type": "news",
+    "title": "Can Agent Memory Systems Track Evolving State?",
+    "content": "",
+    "url": "https://arxiv.org/abs/2608.19652",
+    "relevance": "medium",
+    "tags": [
+      "daily_digest"
+    ],
+    "timestamp": "2026-08-21T05:00:14.857Z",
+    "processed": false
+  },
+  {
+    "event_id": "E-1787288414870",
+    "source": "rss",
+    "type": "news",
+    "title": "Frequency-Aware Continual Learning for Smart Contract Vulnerability Detection with Large Language Models",
+    "content": "",
+    "url": "https://arxiv.org/abs/2608.19680",
+    "relevance": "medium",
+    "tags": [
+      "daily_digest"
+    ],
+    "timestamp": "2026-08-21T05:00:14.870Z",
+    "processed": false
+  },
+  {
+    "event_id": "E-1787288414887",
+    "source": "rss",
+    "type": "news",
+    "title": "Learning Hierarchical Skill Policies with Offline Quality-Diversity Reinforcement Learning",
+    "content": "",
+    "url": "https://arxiv.org/abs/2608.19684",
+    "relevance": "medium",
+    "tags": [
+      "daily_digest"
+    ],
+    "timestamp": "2026-08-21T05:00:14.887Z",
+    "processed": false
+  },
+  {
+    "event_id": "E-1787288414902",
+    "source": "rss",
+    "type": "news",
+    "title": "Rethinking the Evaluation and Optimization of LLM-Based Social Simulation",
+    "content": "",
+    "url": "https://arxiv.org/abs/2608.19689",
+    "relevance": "medium",
+    "tags": [
+      "daily_digest"
+    ],
+    "timestamp": "2026-08-21T05:00:14.902Z",
+    "processed": false
+  },
+  {
+    "event_id": "E-1787288414914",
+    "source": "rss",
+    "type": "news",
+    "title": "Beyond Memory Majority: Latent-Source Reasoning for Multi-Agent Memory Arbitration",
+    "content": "",
+    "url": "https://arxiv.org/abs/2608.19701",
+    "relevance": "medium",
+    "tags": [
+      "daily_digest"
+    ],
+    "timestamp": "2026-08-21T05:00:14.914Z",
+    "processed": false
+  },
+  {
+    "event_id": "E-1787288414924",
+    "source": "rss",
+    "type": "news",
+    "title": "SafeBranch: Branch-Pair Safety Alignment for Embodied Agents",
+    "content": "",
+    "url": "https://arxiv.org/abs/2608.19729",
+    "relevance": "medium",
+    "tags": [
+      "daily_digest"
+    ],
+    "timestamp": "2026-08-21T05:00:14.924Z",
+    "processed": false
+  },
+  {
+    "event_id": "E-1787288414936",
+    "source": "rss",
+    "type": "news",
+    "title": "GenMatch: An End-to-End Generative Matching Framework for Micro-View Order-Dispatching in Ride-Hailing",
+    "content": "",
+    "url": "https://arxiv.org/abs/2608.19751",
+    "relevance": "medium",
+    "tags": [
+      "daily_digest"
+    ],
+    "timestamp": "2026-08-21T05:00:14.936Z",
+    "processed": false
+  },
+  {
+    "event_id": "E-1787288414947",
+    "source": "rss",
+    "type": "news",
+    "title": "TT-net: Quantum Inspired Tensor Network Denoising in Conditional GANs",
+    "content": "",
+    "url": "https://arxiv.org/abs/2608.19789",
+    "relevance": "medium",
+    "tags": [
+      "daily_digest"
+    ],
+    "timestamp": "2026-08-21T05:00:14.947Z",
+    "processed": false
+  }
+]
