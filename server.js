@@ -49,6 +49,8 @@ import { indexAll, searchKnowledge, getDocumentStats, getKnowledgeGraph } from '
 
 import { getRequirementsTemplate, getRequirementCategories, seedGraduationRequirements, updateRequirement, getGraduationSummary, getAllGraduationSummaries, syncToDb as syncGraduationToDb, indexToKb as indexGraduationToKb } from './lib/graduation.js'
 
+import { createDecision, listDecisions, getDecision, updateDecision, deleteDecision, updateOutcome, getAllDecisions, getDecisionStats } from './lib/decisions.js'
+
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const labosDir = join(__dirname, 'labos')
 const app = express()
@@ -1143,6 +1145,55 @@ app.put('/api/graduation/:id/requirement/:reqId', requireAuth, (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message })
   }
+})
+
+// --- Decisions (v0.7.9 W6b) ---
+app.get('/api/decisions/all', requireRole('teacher'), (req, res) => {
+  try {
+    const users = loadUsers().filter(u => u.role !== 'teacher')
+    res.json({ decisions: getAllDecisions(users.map(u => u.id)) })
+  } catch (e) { res.status(500).json({ error: e.message }) }
+})
+
+app.get('/api/decisions/:studentId', requireAuth, (req, res) => {
+  try {
+    if (req.user.role === 'student' && req.user.id !== req.params.studentId) {
+      return res.status(403).json({ error: 'Forbidden' })
+    }
+    res.json({ decisions: listDecisions(req.params.studentId), stats: getDecisionStats(req.params.studentId) })
+  } catch (e) { res.status(500).json({ error: e.message }) }
+})
+
+app.post('/api/decisions/:studentId', requireAuth, (req, res) => {
+  try {
+    if (req.user.role === 'student' && req.user.id !== req.params.studentId) {
+      return res.status(403).json({ error: 'Forbidden' })
+    }
+    const d = createDecision(req.params.studentId, {
+      decision: req.body.decision,
+      rationale: req.body.rationale,
+      outcome: req.body.outcome,
+      source: req.body.source || 'manual',
+    })
+    res.json({ ok: true, decision: d })
+  } catch (e) { res.status(500).json({ error: e.message }) }
+})
+
+app.put('/api/decisions/:studentId/:decisionId', requireAuth, (req, res) => {
+  try {
+    if (req.user.role === 'student' && req.user.id !== req.params.studentId) {
+      return res.status(403).json({ error: 'Forbidden' })
+    }
+    const d = updateDecision(req.params.studentId, req.params.decisionId, req.body)
+    res.json({ ok: true, decision: d })
+  } catch (e) { res.status(500).json({ error: e.message }) }
+})
+
+app.delete('/api/decisions/:studentId/:decisionId', requireRole('teacher'), (req, res) => {
+  try {
+    const r = deleteDecision(req.params.studentId, req.params.decisionId)
+    res.json(r)
+  } catch (e) { res.status(500).json({ error: e.message }) }
 })
 
 // --- Trajectory (v2.1 W7a) ---
