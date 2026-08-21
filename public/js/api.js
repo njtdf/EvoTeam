@@ -1,7 +1,7 @@
 // api.js - Shared API client for AutoProf frontend
 
 // Version auto-reload: detects stale cached JS and forces reload
-const APP_VERSION = '0.7.10'
+const APP_VERSION = '0.7.11'
 
 async function checkVersion() {
   try {
