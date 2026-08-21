@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EvoTeam - Student</title>
-<link rel="stylesheet" href="/css/app.css?v=0713">
+<link rel="stylesheet" href="/css/app.css?v=0714">
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -39,6 +39,7 @@
       <button class="btn btn-secondary btn-sm" @click="loadTemplate">模板</button>
       <button class="btn btn-secondary btn-sm" @click="clearEditor">清空</button>
       <button class="btn btn-secondary btn-sm" @click="toggleActions">我的会议行动<span v-if="myActions.length"> ({{ myActions.length }})</span></button>
+      <button class="btn btn-secondary btn-sm" @click="toggleFeedback">上次反馈<span v-if="reportContext"> ({{ (reportContext.open_tasks?.length||0) + (reportContext.meeting_actions?.length||0) }})</span></button>
       <button class="btn btn-primary btn-sm" :disabled="draftLoading" @click="generateDraft">
         {{ draftLoading ? 'AI 生成中...' : '🤖 AI 辅助填写' }}
       </button>
@@ -62,7 +63,68 @@
           </tr>
         </tbody>
       </table>
-      <div v-else class="empty-state" style="padding:16px">暂无分配给你的会议行动项</div>
+     <div v-else class="empty-state" style="padding:16px">暂无分配给你的会议行动项</div>
+   </div>
+    <!-- 上次反馈面板 (飞轮回流) -->
+    <div v-if="showFeedback && reportContext" class="report-feedback-card">
+      <div class="card-title">
+        🔄 上次反馈 (飞轮回流)
+        <span class="text-muted" style="font-size:11px" v-if="reportContext.last_summary?.generated_at">
+          AI 总结于 {{ reportContext.last_summary.generated_at.slice(0,10) }}
+        </span>
+      </div>
+      <!-- 上次 AI 总结风险 -->
+      <div class="rf-section" v-if="reportContext.last_summary?.risks?.length">
+        <div class="rf-label">⚠ 上次风险标签</div>
+        <div class="rf-tags">
+          <span class="card-risk" v-for="r in reportContext.last_summary.risks" :key="r">{{ r }}</span>
+        </div>
+      </div>
+      <!-- 上次 AI 建议 -->
+      <div class="rf-section" v-if="reportContext.last_summary?.suggestions?.length">
+        <div class="rf-label">💡 上次建议</div>
+        <ul class="rf-list"><li v-for="s in reportContext.last_summary.suggestions" :key="s">{{ s }}</li></ul>
+      </div>
+      <!-- 会议行动项 -->
+      <div class="rf-section" v-if="reportContext.meeting_actions?.length">
+        <div class="rf-label">📋 会议行动项 ({{ reportContext.meeting_actions.length }})</div>
+        <table class="actions-table">
+          <thead><tr><th>任务</th><th>截止</th><th>状态</th><th>会议</th></tr></thead>
+          <tbody>
+            <tr v-for="a in reportContext.meeting_actions" :key="a.task_id">
+              <td>{{ a.task }}</td>
+              <td>{{ a.deadline || '-' }}</td>
+              <td><span class="tag" :class="a.status==='done' ? 'tag-on-track' : 'tag-at-risk'">{{ a.status }}</span></td>
+              <td>{{ a.meeting_date }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- 未完成任务 -->
+      <div class="rf-section" v-if="reportContext.open_tasks?.length">
+        <div class="rf-label">✅ 未完成任务 ({{ reportContext.open_tasks.length }})</div>
+        <div class="rf-task-list">
+          <div class="rf-task" v-for="t in reportContext.open_tasks" :key="t.task_id">
+            <span class="rf-task-id mono">{{ t.task_id }}</span>
+            <span class="rf-task-title">{{ t.title }}</span>
+            <span class="tag" :class="'priority-' + t.priority">{{ t.priority }}</span>
+            <span v-if="t.deadline" class="task-deadline">{{ t.deadline }}</span>
+          </div>
+        </div>
+      </div>
+      <!-- 飞轮最近事件 -->
+      <div class="rf-section" v-if="reportContext.flywheel_recent?.length">
+        <div class="rf-label">🔄 飞轮最近</div>
+        <div class="rf-flywheel" v-for="f in reportContext.flywheel_recent" :key="f.started_at">
+          <span class="tag tag-source">{{ f.event }}</span>
+          <span class="text-muted" style="font-size:11px">{{ f.started_at?.slice(0,16) }}</span>
+          <span class="tag" :class="f.status==='completed' ? 'tag-on-track' : 'tag-discussion'">{{ f.status }}</span>
+        </div>
+      </div>
+      <!-- 空状态 -->
+      <div v-if="!reportContext.last_summary && !reportContext.meeting_actions?.length && !reportContext.open_tasks?.length" class="empty-state" style="padding:16px">
+        暂无历史反馈。提交周报后 AI 会自动生成总结并回流到知识库。
+      </div>
     </div>
     <div class="split-pane" style="height:calc(100vh - 100px)">
       <div class="pane-left" style="display:flex; flex-direction:column">
@@ -366,7 +428,7 @@
     </main>
   </div>
 </div>
-<script src="/js/api.js?v=0713"></script>
-<script src="/js/student.js?v=0713"></script>
+<script src="/js/api.js?v=0714"></script>
+<script src="/js/student.js?v=0714"></script>
 </body>
 </html>

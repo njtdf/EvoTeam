@@ -11,6 +11,9 @@ createApp({
     const showPolishSuggestion = ref(false)
     const draftLoading = ref(false)
     let pollTimer = null
+    // --- 周报上下文 (飞轮回流) ---
+    const reportContext = ref(null)
+    const showFeedback = ref(false)
     // --- 会议行动(只读) ---
     const myActions = ref([])
     const showActions = ref(false)
@@ -105,8 +108,10 @@ status: "on_track"
       try {
         const data = await api('/api/submit', { method: 'POST', body: JSON.stringify({ content: markdown.value }) })
         if (data.ok) {
-          showToast('Report submitted! AI is generating summary...')
+          const flywheelMsg = data.flywheel ? ' | 已索引知识库+记录轨迹' : ''
+          showToast('Report submitted! AI is generating summary...' + flywheelMsg)
           startPollingSummary(user.value.id)
+          loadReportContext(user.value.id)
         }
       } catch (e) { showToast('Submit failed: ' + e.message) }
       finally { submitting.value = false }
@@ -161,6 +166,22 @@ status: "on_track"
     async function toggleActions() {
       if (showActions.value) { showActions.value = false; return }
       await loadMyActions(); showActions.value = true
+    }
+
+    // ===== 周报上下文 (飞轮回流) =====
+    async function loadReportContext(sid) {
+      const studentId = sid || user.value?.id
+      if (!studentId) return
+      try {
+        const data = await api(`/api/report-context/${studentId}`)
+        reportContext.value = data
+      } catch (e) { console.error('report-context load failed:', e.message) }
+    }
+
+    function toggleFeedback() {
+      if (showFeedback.value) { showFeedback.value = false; return }
+      loadReportContext()
+      showFeedback.value = true
     }
 
     // ===== 看板 =====
@@ -387,6 +408,7 @@ status: "on_track"
     user.value = u
     loadTemplate()
     loadMyActions()
+    loadReportContext(u.id)
     loadMyVc()
   })
 
@@ -617,6 +639,7 @@ status: "on_track"
       roleLabel, updatePreview, loadTemplate, clearEditor, doSubmit, logout,
       formatMessage,
       draftLoading, generateDraft,
+      reportContext, showFeedback, loadReportContext, toggleFeedback,
       myActions, showActions, actionsLoading, toggleActions,
       activeTab, tasks, kanbanCols, switchToKanban, loadMyTasks,
       myTasksByStatus, isOverdue, updateTaskStatus,

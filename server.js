@@ -256,13 +256,80 @@ app.post('/api/submit', requireAuth, async (req, res) => {
     console.error('[submit] AI summary failed:', e.message)
   })
 
-  res.json({ ok: true, file: `${week}.md`, student_id: studentId })
+  res.json({ ok: true, file: `${week}.md`, student_id: studentId, flywheel: true })
 })
 
 // --- API: Summary ---
 app.get('/api/summary/:id', requireAuth, (req, res) => {
   const summary = loadSummary(req.params.id)
   res.json({ summary, has_api_key: hasApiKey() })
+})
+
+// --- API: Report Context (Phase 3: 飞轮↔周报双向) ---
+// 返回结构化上下文: 上次AI总结 + 会议行动项 + 未完成任务 + 飞轮最近事件 + 本体关联
+app.get('/api/report-context/:id', requireAuth, (req, res) => {
+  const sid = req.params.id
+  const result = { student_id: sid, last_summary: null, meeting_actions: [], open_tasks: [], flywheel_recent: [], ontology_links: null }
+
+  // 1. 上次 AI 总结
+  try {
+    const summary = loadSummary(sid)
+    if (summary && summary.generated_at) {
+      result.last_summary = {
+        summary: summary.summary || '',
+        risks: summary.risks || [],
+        suggestions: summary.suggestions || [],
+        generated_at: summary.generated_at,
+      }
+    }
+  } catch {}
+
+  // 2. 会议行动项 (分配给该学生的)
+  try {
+    for (const m of listMeetings()) {
+      const a = loadActions(m.date)
+      if (!a || !a.actions) continue
+      for (const act of a.actions) {
+        if (act.owner_student_id === sid || act.owner_name === sid) {
+          result.meeting_actions.push({ ...act, meeting_date: m.date })
+        }
+      }
+    }
+  } catch {}
+
+  // 3. 未完成任务
+  try {
+    const tasks = getTasksByStudent(sid)
+    result.open_tasks = tasks.filter(t => t.status !== 'done').map(t => ({
+      task_id: t.task_id, title: t.title, status: t.status,
+      deadline: t.deadline || null, priority: t.priority || 'medium',
+      source: t.source || 'manual',
+    }))
+  } catch {}
+
+  // 4. 飞轮最近事件 (该学生相关)
+  try {
+    const log = getFlywheelLog(30)
+    result.flywheel_recent = log
+      .filter(e => e.payload?.studentId === sid)
+      .slice(0, 3)
+      .map(e => ({ event: e.event, status: e.status, started_at: e.started_at }))
+  } catch {}
+
+  // 5. 本体关联摘要
+  try {
+    const graph = getEntityGraph('student', sid)
+    if (graph && graph.connected) {
+      const counts = {}
+      for (const c of graph.connected) {
+        const t = c.entity?.type || 'unknown'
+        counts[t] = (counts[t] || 0) + 1
+      }
+      result.ontology_links = counts
+    }
+  } catch {}
+
+  res.json(result)
 })
 
 // --- API: Chat (SSE streaming) ---

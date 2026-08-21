@@ -1273,3 +1273,20 @@ body {
 .kb-result-score { font-size: 11px; color: #07C160; background: #e6f7ee; padding: 2px 8px; border-radius: 10px; }
 .kb-result-snippet { font-size: 13px; color: #666; line-height: 1.5; max-height: 60px; overflow: hidden; }
 .kb-result-path { font-size: 11px; color: #aaa; margin-top: 4px; }
+/* ===== Phase 3: Report Feedback / Flywheel Context ===== */
+.report-feedback-card { margin: 0 12px 12px; padding: 12px 16px; background: #f8f9ff; border: 1px solid #d6e0ff; border-radius: 8px; max-height: 320px; overflow-y: auto; }
+.rf-teacher-card { margin-top: 8px; border: 1px solid #e0e6ed; }
+.rf-section { margin-bottom: 12px; }
+.rf-section:last-child { margin-bottom: 0; }
+.rf-label { font-size: 13px; font-weight: 600; color: #4a5568; margin-bottom: 4px; }
+.rf-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.rf-list { margin: 4px 0 0 16px; padding: 0; font-size: 13px; color: #4a5568; }
+.rf-list li { margin-bottom: 2px; }
+.rf-task-list { display: flex; flex-direction: column; gap: 4px; }
+.rf-task { display: flex; align-items: center; gap: 8px; padding: 4px 8px; background: #fff; border-radius: 4px; font-size: 12px; border: 1px solid #edf0f4; }
+.rf-task-id { color: #8492a6; font-size: 11px; min-width: 50px; }
+.rf-task-title { flex: 1; color: #2d3748; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rf-flywheel { display: flex; align-items: center; gap: 6px; padding: 4px 0; font-size: 12px; }
+.priority-high { background: #ff4d4f20; color: #ff4d4f; }
+.priority-medium { background: #faad1420; color: #b8860b; }
+.priority-low { background: #52c41a20; color: #389e0d; }

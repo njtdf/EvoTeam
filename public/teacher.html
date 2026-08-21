@@ -8,7 +8,7 @@
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<link rel="stylesheet" href="/css/app.css?v=0713">
+<link rel="stylesheet" href="/css/app.css?v=0714">
 </head>
 <body>
 <div id="app">
@@ -233,12 +233,48 @@
               {{ report.meta.status || 'on_track' }}
             </span>
           </div>
-          <div class="md-preview" v-html="reportHtml" style="border:none; padding:0"></div>
-        </div>
-        <div v-else-if="loadingReport" class="loading">Loading report...</div>
-        <div v-else-if="loadingReport" class="loading">加载周报中...</div>
-        <div v-else class="empty-state">该学生暂未提交周报</div>
-      </div>
+         <div class="md-preview" v-html="reportHtml" style="border:none; padding:0"></div>
+       </div>
+       <div v-else-if="loadingReport" class="loading">加载周报中...</div>
+       <div v-else class="empty-state">该学生暂未提交周报</div>
+       <!-- Phase 3: 飞轮上下文 (任务+会议行动+飞轮状态) -->
+       <div v-if="reportContext" class="card rf-teacher-card">
+         <div class="card-title">🔄 飞轮上下文</div>
+         <div class="rf-section" v-if="reportContext.open_tasks?.length">
+           <div class="rf-label">✅ 未完成任务 ({{ reportContext.open_tasks.length }})</div>
+           <div class="rf-task-list">
+             <div class="rf-task" v-for="t in reportContext.open_tasks.slice(0,8)" :key="t.task_id">
+               <span class="rf-task-id mono">{{ t.task_id }}</span>
+               <span class="rf-task-title">{{ t.title }}</span>
+               <span class="tag" :class="'priority-' + t.priority">{{ t.priority }}</span>
+               <span v-if="t.deadline" class="task-deadline">{{ t.deadline }}</span>
+               <span class="tag tag-source">{{ t.source }}</span>
+             </div>
+           </div>
+         </div>
+         <div class="rf-section" v-if="reportContext.meeting_actions?.length">
+           <div class="rf-label">📋 会议行动项 ({{ reportContext.meeting_actions.length }})</div>
+           <div class="rf-task" v-for="a in reportContext.meeting_actions.slice(0,5)" :key="a.task_id">
+             <span class="rf-task-id mono">{{ a.task_id }}</span>
+             <span class="rf-task-title">{{ a.task }}</span>
+             <span class="tag" :class="a.status==='done' ? 'tag-on-track' : 'tag-at-risk'">{{ a.status }}</span>
+             <span v-if="a.deadline" class="task-deadline">{{ a.deadline }}</span>
+           </div>
+         </div>
+         <div class="rf-section" v-if="reportContext.flywheel_recent?.length">
+           <div class="rf-label">🔄 飞轮最近</div>
+           <div class="rf-flywheel" v-for="f in reportContext.flywheel_recent" :key="f.started_at">
+             <span class="tag tag-source">{{ f.event }}</span>
+             <span class="text-muted" style="font-size:11px">{{ f.started_at?.slice(0,16) }}</span>
+             <span class="tag" :class="f.status==='completed' ? 'tag-on-track' : 'tag-discussion'">{{ f.status }}</span>
+           </div>
+         </div>
+         <div class="rf-section" v-if="reportContext.ontology_links">
+           <div class="rf-label">🔗 关联</div>
+           <span class="tag" v-for="(count, type) in reportContext.ontology_links" :key="type">{{ type }}: {{ count }}</span>
+         </div>
+       </div>
+     </div>
     </div>
   </div>
 
@@ -1286,7 +1322,7 @@
 
 
 
-<script src="/js/api.js?v=0713"></script>
-<script src="/js/teacher.js?v=0713"></script>
+<script src="/js/api.js?v=0714"></script>
+<script src="/js/teacher.js?v=0714"></script>
 </body>
 </html>

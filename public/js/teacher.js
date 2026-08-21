@@ -10,8 +10,9 @@ createApp({
     const chatMessages = ref([])
     const chatInput = ref('')
     const chatStreaming = ref(false)
-    const loadingReport = ref(false)
-   const chatMessagesEl = ref(null)
+   const loadingReport = ref(false)
+   const reportContext = ref(null)
+  const chatMessagesEl = ref(null)
  
     // --- 总览 Dashboard 状态 ---
     const dashboardData = ref(null)
@@ -74,7 +75,7 @@ createApp({
 
     async function onStudentChange() {
       if (!selectedStudentId.value) return
-      report.value = null; summary.value = null; chatMessages.value = []
+      report.value = null; summary.value = null; chatMessages.value = []; reportContext.value = null
       loadingReport.value = true
       const sid = selectedStudentId.value
       const [reportResp, summaryResp, chatResp] = await Promise.allSettled([
@@ -87,6 +88,11 @@ createApp({
         chatMessages.value = chatResp.value.messages || []
         nextTick(scrollChatToBottom)
       }
+      // Phase 3: 飞轮上下文 (任务+会议行动+飞轮状态)
+      try {
+        const ctx = await api(`/api/report-context/${sid}`)
+        reportContext.value = ctx
+      } catch (e) { console.error('report-context:', e.message) }
     }
 
     async function sendChat() {
@@ -1354,7 +1360,8 @@ return {
       // v2.1 W6a
       capabilityLabels, newDecision, saveGraduation, saveCapability, addDecision,
       decisionsList, decisionsStats, loadDecisions, deleteDecision, updateDecisionOutcome,
-      chatInput, chatStreaming, loadingReport, reportHtml, chatMessagesEl,
+     chatInput, chatStreaming, loadingReport, reportHtml, chatMessagesEl,
+     reportContext,
      onStudentChange, sendChat, logout,
      formatMessage,
      switchToCockpit,
