@@ -37,10 +37,19 @@ createApp({
     const boardStats = ref(null)
     const news = ref([])
     const newsError = ref('')
-    const showTaskModal = ref(false)
-    const newTask = ref({ title: '', owner_student_id: '', deadline: '', priority: 'medium', project: '' })
+   const showTaskModal = ref(false)
+   const newTask = ref({ title: '', owner_student_id: '', deadline: '', priority: 'medium', project: '', description: '' })
+   const taskDetail = ref(null)
+   const showTaskDetail = ref(false)
+   const taskDetailLoading = ref(false)
+   // Phase 4: Promise Ledger (Li Kaifu execution closed-loop)
+   const promiseStats = ref(null)
+   const consistencyData = ref([])
+   const overduePromises = ref([])
+   const upcomingPromises = ref([])
+   const showPromisePanel = ref(false)
 
-    const kanbanCols = [
+   const kanbanCols = [
       { status: 'todo', label: '待办' },
       { status: 'in_progress', label: '进行中' },
       { status: 'done', label: '已完成' },
@@ -281,9 +290,9 @@ createApp({
         const data = await api('/api/tasks', { method: 'POST', body: JSON.stringify(newTask.value) })
         if (data.ok) {
           showToast('任务已创建')
-          showTaskModal.value = false
-          newTask.value = { title: '', owner_student_id: '', deadline: '', priority: 'medium', project: '' }
-          await loadTasks(); await loadBoardStats()
+         showTaskModal.value = false
+         newTask.value = { title: '', owner_student_id: '', deadline: '', priority: 'medium', project: '', description: '' }
+         await loadTasks(); await loadBoardStats()
         }
       } catch (e) { showToast('创建失败: ' + e.message) }
     }
@@ -296,16 +305,33 @@ createApp({
       } catch (e) { showToast('更新失败: ' + e.message) }
     }
 
-    async function deleteTask(taskId) {
-      if (!confirm('删除此任务?')) return
-      try {
-        await api(`/api/tasks/${taskId}`, { method: 'DELETE' })
-        await loadTasks(); await loadBoardStats()
-        showToast('已删除')
-      } catch (e) { showToast('删除失败: ' + e.message) }
-    }
+   async function deleteTask(taskId) {
+     if (!confirm('删除此任务?')) return
+     try {
+       await api(`/api/tasks/${taskId}`, { method: 'DELETE' })
+       await loadTasks(); await loadBoardStats()
+       showToast('已删除')
+     } catch (e) { showToast('删除失败: ' + e.message) }
+   }
 
-    async function promoteToKanban(date, taskId) {
+   // ===== Phase 4: 任务详情 =====
+   async function openTaskDetail(taskId) {
+     showTaskDetail.value = true
+     taskDetailLoading.value = true
+     taskDetail.value = null
+     try {
+       const data = await api(`/api/tasks/${taskId}/detail`)
+       taskDetail.value = data
+     } catch (e) { showToast('加载任务详情失败: ' + e.message) }
+     finally { taskDetailLoading.value = false }
+   }
+
+   function closeTaskDetail() {
+     showTaskDetail.value = false
+     taskDetail.value = null
+   }
+
+   async function promoteToKanban(date, taskId) {
       try {
         const data = await api('/api/tasks/from-meeting', { method: 'POST', body: JSON.stringify({ date, task_id: taskId }) })
         if (data.ok) showToast(`已提升到看板: ${data.task.title}`)
@@ -313,10 +339,39 @@ createApp({
     }
 
     // ===== 总览 Dashboard =====
-    async function switchToDashboard() {
+    async function loadPromiseData() {
+      try {
+        const [stats, consistency, overdue, upcoming] = await Promise.all([
+          api('/api/promises/stats').catch(() => null),
+          api('/api/promises/consistency').catch(() => ({ students: [] })),
+          api('/api/promises/overdue').catch(() => ({ promises: [] })),
+          api('/api/promises/upcoming?days=7').catch(() => ({ promises: [] })),
+        ])
+        promiseStats.value = stats?.stats || null
+        consistencyData.value = consistency?.students || []
+        overduePromises.value = overdue?.promises || []
+        upcomingPromises.value = upcoming?.promises || []
+      } catch (e) {
+        console.error('loadPromiseData error:', e.message)
+      }
+    }
+
+    async function fulfillPromiseAction(promiseId) {
+      try {
+        await api('/api/promises/' + promiseId + '/fulfill', {
+          method: 'PUT',
+          body: JSON.stringify({ evidence: '' }),
+        })
+        showToast('承诺已标记兑现')
+        await loadPromiseData()
+      } catch (e) { showToast('操作失败: ' + e.message) }
+    }
+
+async function switchToDashboard() {
       activeTab.value = 'dashboard'
       await Promise.all([loadDashboard(), loadTeamFeed()])
       await loadTodayTasks()
+      await loadPromiseData()
     }
 
     async function loadDashboard() {
@@ -1375,9 +1430,13 @@ return {
       uploadMeeting, loadMeeting, onOwnerChange, saveActions,
       // 看板
       tasks, boardStats, news, newsError, showTaskModal, newTask, kanbanCols,
-      switchToKanban, loadTasks, loadBoardStats, loadNews, tasksByStatus,
-      isOverdue, createTask, updateTaskStatus, deleteTask, promoteToKanban,
-      // AI 工具箱
+     switchToKanban, loadTasks, loadBoardStats, loadNews, tasksByStatus,
+     isOverdue, createTask, updateTaskStatus, deleteTask, promoteToKanban,
+     taskDetail, showTaskDetail, taskDetailLoading, openTaskDetail, closeTaskDetail,
+     // Phase 4: Promise Ledger
+     promiseStats, consistencyData, overduePromises, upcomingPromises, showPromisePanel,
+     loadPromiseData, fulfillPromiseAction,
+     // AI 工具箱
       skillManifest, selectedSkill, skillInput, skillOutput, skillStreaming,
      skillPlaceholder, skillOutputHtml, switchToSkills, selectSkill, runSkillAI,
      openReviewMode, goToSkill,

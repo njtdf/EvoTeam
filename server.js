@@ -54,6 +54,7 @@ import { getRequirementsTemplate, getRequirementCategories, seedGraduationRequir
 import { createDecision, listDecisions, getDecision, updateDecision, deleteDecision, updateOutcome, getAllDecisions, getDecisionStats } from './lib/decisions.js'
 
 import { canTransition, getValidTransitions, transitionTask } from './lib/kanban.js'
+import { createPromise, getPromises, fulfillPromise, getOverduePromises, getUpcomingDeadlines, getConsistencyIndex, getAllConsistencyIndices, getGoalTree, autoExtractFromMeeting, getPromiseStats, markOverdue, getPromiseUrgency } from './lib/promise-ledger.js'
 import { getLabState, recordReward, getRewards, getLabRewardSummary, deleteReward } from './lib/lab-state.js'
 import { recordEvent, recordFromNews, recordFromEmails, getUnprocessed, markProcessed, getRecentEvents, buildExternalContext, getEventStats } from './lib/external-events.js'
 import { extractFromAllTrajectories, listExtractedSkills, searchSkills, getSkillStats } from './lib/skill-extractor.js'
@@ -732,6 +733,7 @@ app.post('/api/tasks', requireRole('teacher'), (req, res) => {
 
 app.put('/api/tasks/:id', requireAuth, (req, res) => {
   const patch = { ...req.body }
+  const wasStatus = getAllTasks().find(t => t.task_id === req.params.id)?.status
   // Students can only change status, and only on their own tasks
   if (req.user.role !== 'teacher') {
     const task = getAllTasks().find(t => t.task_id === req.params.id)
@@ -744,6 +746,10 @@ app.put('/api/tasks/:id', requireAuth, (req, res) => {
   }
   const updated = updateTask(req.params.id, patch)
   if (!updated) return res.status(404).json({ error: 'Task not found' })
+  // Phase 4: 任务完成自动触发飞轮
+  if (wasStatus !== 'done' && updated.status === 'done') {
+    flywheelTrigger('task_done', { taskId: req.params.id, ownerId: updated.owner_student_id, taskTitle: updated.title })
+  }
   res.json({ ok: true, task: updated })
 })
 
@@ -791,7 +797,131 @@ app.post('/api/tasks/:id/transition', requireAuth, async (req, res) => {
   if (result.ok && newStatus === 'done') {
     flywheelTrigger('task_done', { taskId: req.params.id, ownerId: result.task?.owner_student_id, taskTitle: result.task?.title })
   }
-  res.json(result)
+ res.json(result)
+})
+
+// --- API: Task Detail (Phase 4: 关联实体) ---
+app.get('/api/tasks/:id/detail', requireAuth, (req, res) => {
+  const data = loadTasks()
+  const task = data.tasks.find(t => t.task_id === req.params.id)
+  if (!task) return res.status(404).json({ error: 'Task not found' })
+
+  const detail = { task, source_meeting: null, source_report: null, ontology_links: null, transition_history: task.transition_history || [] }
+
+  // 来源会议
+  if (task.source === 'meeting' && task.source_ref) {
+    try {
+      const meetingDate = task.source_ref.replace(/-A\d+$/, '').slice(0, 10)
+      const actions = loadActions(meetingDate)
+      if (actions && actions.actions) {
+        const action = actions.actions.find(a => a.task_id === task.source_ref)
+        detail.source_meeting = {
+          date: meetingDate,
+          action: action || null,
+          decisions: actions.decisions || [],
+        }
+      }
+    } catch {}
+  }
+
+  // 来源周报 (source='weekly' 时 source_ref 可能是学生ID)
+  if (task.source === 'weekly') {
+    try {
+      const summary = loadSummary(task.owner_student_id)
+      if (summary) {
+        detail.source_report = {
+          student_id: task.owner_student_id,
+          summary: summary.summary || '',
+          risks: summary.risks || [],
+          generated_at: summary.generated_at || '',
+        }
+      }
+    } catch {}
+  }
+
+  // 本体关联
+  try {
+    const graph = getEntityGraph('task', req.params.id)
+    if (graph && graph.connected) {
+      detail.ontology_links = graph.connected.map(c => ({
+        type: c.entity?.type || 'unknown',
+        id: c.entity?.id || '',
+        label: c.entity?.label || c.entity?.name || '',
+      }))
+    }
+  } catch {}
+
+  // 学生信息
+  if (task.owner_student_id) {
+    try {
+      const students = loadStudents()
+      const student = students.find(s => s.id === task.owner_student_id)
+      if (student) detail.student = { id: student.id, name: student.name, project: student.project || '' }
+    } catch {}
+  }
+
+  res.json(detail)
+})
+
+
+// --- API: Promise Ledger (Li Kaifu execution closed-loop engine) ---
+
+app.get('/api/promises/stats', requireRole('teacher'), (req, res) => {
+  res.json({ stats: getPromiseStats() })
+})
+
+app.get('/api/promises/overdue', requireRole('teacher'), (req, res) => {
+  res.json({ promises: getOverduePromises() })
+})
+
+app.get('/api/promises/upcoming', requireRole('teacher'), (req, res) => {
+  const days = parseInt(req.query.days) || 7
+  res.json({ promises: getUpcomingDeadlines(days) })
+})
+
+app.get('/api/promises/consistency', requireRole('teacher'), (req, res) => {
+  res.json({ students: getAllConsistencyIndices() })
+})
+
+app.get('/api/promises/consistency/:id', requireAuth, (req, res) => {
+  const idx = getConsistencyIndex(req.params.id)
+  if (!idx) return res.status(404).json({ error: 'Student not found' })
+  res.json(idx)
+})
+
+app.get('/api/promises/goal-tree', requireAuth, (req, res) => {
+  res.json(getGoalTree())
+})
+
+app.get('/api/promises', requireAuth, (req, res) => {
+  const filters = {}
+  if (req.query.student_id) filters.student_id = req.query.student_id
+  if (req.query.meeting_date) filters.meeting_date = req.query.meeting_date
+  if (req.query.status) filters.status = req.query.status
+  const promises = getPromises(filters)
+  // Attach urgency to each promise
+  const withUrgency = promises.map(p => ({ ...p, urgency: getPromiseUrgency(p) }))
+  res.json({ promises: withUrgency })
+})
+
+app.post('/api/promises', requireRole('teacher'), (req, res) => {
+  const p = createPromise(req.body)
+  res.json({ ok: true, promise: p })
+})
+
+app.post('/api/promises/extract/:date', requireRole('teacher'), async (req, res) => {
+  try {
+    const result = await autoExtractFromMeeting(req.params.date)
+    res.json(result)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.put('/api/promises/:id/fulfill', requireRole('teacher'), (req, res) => {
+  const p = fulfillPromise(req.params.id, req.body.evidence || '')
+  if (!p) return res.status(404).json({ error: 'Promise not found' })
+  res.json({ ok: true, promise: p })
 })
 
 // --- API: Lab State + Rewards (W8) ---

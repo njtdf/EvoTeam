@@ -8,7 +8,7 @@
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<link rel="stylesheet" href="/css/app.css?v=0714">
+<link rel="stylesheet" href="/css/app.css?v=0715">
 </head>
 <body>
 <div id="app">
@@ -68,8 +68,59 @@
       </div>
     </div>
 
-    <!-- 可滚动主区域 -->
+        <!-- Overdue Warning Bar (Li Kaifu execution closed-loop) -->
+    <div class="overdue-warning-bar" v-if="overduePromises.length > 0" @click="showPromisePanel = !showPromisePanel">
+      <span class="ow-icon">⚠️</span>
+      <span class="ow-text">{{ overduePromises.length }} 条承诺已逾期 — 点击查看承诺账本</span>
+      <span class="ow-count">{{ overduePromises.length }}</span>
+    </div>
+
+    <!-- Promise Ledger Panel (toggle) -->
+    <div class="kn-section" v-if="showPromisePanel" style="margin-bottom:12px">
+      <div class="kn-section-label">📝 承诺账本 <button class="btn-mini" @click="showPromisePanel=false" style="float:right;font-size:11px;padding:2px 8px;border:1px solid #d1d5db;border-radius:4px;background:white;cursor:pointer">收起</button></div>
+      <div class="promise-list" v-if="overduePromises.length > 0">
+        <div class="promise-item" :class="'urgency-' + p.urgency" v-for="p in overduePromises" :key="p.promise_id">
+          <div class="promise-promise-text">{{ p.promise }}</div>
+          <div class="promise-meta">
+            <span>{{ p.promiser_name || 'Unmatched' }}</span>
+            <span v-if="p.deadline">截止: {{ p.deadline }}</span>
+            <span class="promise-badge" :class="p.status">{{ p.status }}</span>
+            <button @click="fulfillPromiseAction(p.promise_id)" style="margin-left:auto;padding:2px 8px;font-size:11px;border:1px solid #d1d5db;border-radius:4px;background:white;cursor:pointer">✓ 兑现</button>
+          </div>
+        </div>
+      </div>
+      <div v-if="upcomingPromises.length > 0" style="margin-top:8px">
+        <div style="font-size:12px;color:#6b7280;margin-bottom:4px">即将到期 (7天内)</div>
+        <div class="promise-list">
+          <div class="promise-item" :class="'urgency-' + p.urgency" v-for="p in upcomingPromises" :key="p.promise_id">
+            <div class="promise-promise-text">{{ p.promise }}</div>
+            <div class="promise-meta">
+              <span>{{ p.promiser_name || 'Unmatched' }}</span>
+              <span v-if="p.deadline">截止: {{ p.deadline }}</span>
+              <button @click="fulfillPromiseAction(p.promise_id)" style="margin-left:auto;padding:2px 8px;font-size:11px;border:1px solid #d1d5db;border-radius:4px;background:white;cursor:pointer">✓ 兑现</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+<!-- 可滚动主区域 -->
     <div class="kn-scroll-area">
+
+            <!-- Consistency Index (言行一致指数) -->
+      <div class="kn-section consistency-section" v-if="consistencyData.length > 0">
+        <div class="kn-section-label">🎯 言行一致指数</div>
+        <div class="consistency-grid">
+          <div class="consistency-card" v-for="s in consistencyData" :key="s.id" @click="goToStudent(s.id)" style="cursor:pointer">
+            <div class="consistency-name">{{ s.name }}</div>
+            <div class="consistency-ring" :class="'rating-' + s.rating">{{ s.consistency_pct }}%</div>
+            <div class="consistency-detail">{{ s.fulfilled }}/{{ s.total }} fulfilled · {{ s.overdue }} overdue</div>
+            <div class="consistency-bar-bg">
+              <div class="consistency-bar-fill" :style="{width: s.consistency_pct + '%', background: s.consistency_pct >= 70 ? '#16a34a' : s.consistency_pct >= 50 ? '#d97706' : '#dc2626'}"></div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- 分区1: 今日任务 (compact) -->
       <div class="kn-section" v-if="!activeAgentId">
@@ -422,26 +473,31 @@
           <span class="tag">{{ tasksByStatus(col.status).length }}</span>
         </div>
         <div class="kanban-col-body">
-          <div class="task-card" v-for="t in tasksByStatus(col.status)" :key="t.task_id"
-               :class="'task-priority-' + (t.priority || 'medium')">
-            <div class="task-card-title">{{ t.title }}</div>
-            <div class="task-card-meta">
-              <span v-if="t.owner_name">{{ t.owner_name }}</span>
-              <span v-else class="text-muted">未指派</span>
-              <span v-if="t.deadline" class="task-deadline" :class="{overdue: isOverdue(t)}">{{ t.deadline }}</span>
-            </div>
-            <div class="task-card-footer">
-              <span class="tag tag-source" v-if="t.source">{{ t.source }}</span>
-              <select class="cell-input task-status-select" :value="t.status" @change="updateTaskStatus(t, $event.target.value)">
-                <option value="todo">待办</option>
-                <option value="in_progress">进行中</option>
-                <option value="done">已完成</option>
-                <option value="blocked">阻塞</option>
-              </select>
-              <button class="btn btn-sm btn-secondary" @click="deleteTask(t.task_id)" v-if="user && user.role==='teacher'">删</button>
-              <button class="btn btn-sm btn-secondary" v-if="t.status==='blocked'" @click.stop="goToSkill('idea-evaluator')">💡 评估方向</button>
-            </div>
-          </div>
+         <!-- Phase 4: 增强任务卡片 -->
+         <div class="task-card task-card-enhanced" v-for="t in tasksByStatus(col.status)" :key="t.task_id"
+              :class="'task-priority-' + (t.priority || 'medium')"
+              @click="openTaskDetail(t.task_id)">
+           <div class="task-card-title">{{ t.title }}</div>
+           <div class="task-card-desc" v-if="t.description">{{ t.description.slice(0, 80) }}{{ t.description.length > 80 ? '...' : '' }}</div>
+           <div class="task-card-meta">
+             <span v-if="t.owner_name">{{ t.owner_name }}</span>
+             <span v-else class="text-muted">未指派</span>
+             <span v-if="t.deadline" class="task-deadline" :class="{overdue: isOverdue(t)}">{{ t.deadline }}</span>
+           </div>
+           <div class="task-card-footer">
+             <span class="tag tag-project" v-if="t.project">📁 {{ t.project }}</span>
+             <span class="tag tag-source" v-if="t.source">{{ t.source }}</span>
+             <span class="tag tag-ref" v-if="t.source_ref">{{ t.source_ref }}</span>
+             <select class="cell-input task-status-select" :value="t.status" @change="updateTaskStatus(t, $event.target.value)" @click.stop>
+               <option value="todo">待办</option>
+               <option value="in_progress">进行中</option>
+               <option value="done">已完成</option>
+               <option value="blocked">阻塞</option>
+             </select>
+             <button class="btn btn-sm btn-secondary" @click.stop="deleteTask(t.task_id)" v-if="user && user.role==='teacher'">删</button>
+             <button class="btn btn-sm btn-secondary" v-if="t.status==='blocked'" @click.stop="goToSkill('idea-evaluator')">💡 评估方向</button>
+           </div>
+         </div>
           <div v-if="tasksByStatus(col.status).length === 0" class="empty-state" style="padding:16px">无</div>
         </div>
       </div>
@@ -462,13 +518,97 @@
           <option value="medium">中</option>
           <option value="low">低</option>
         </select>
-        <input class="form-input" v-model="newTask.project" placeholder="项目" style="margin-bottom:8px">
-        <div style="display:flex; gap:8px; margin-top:8px">
-          <button class="btn btn-primary btn-sm" @click="createTask">创建</button>
-          <button class="btn btn-secondary btn-sm" @click="showTaskModal=false">取消</button>
-        </div>
-      </div>
-    </div>
+       <input class="form-input" v-model="newTask.project" placeholder="项目" style="margin-bottom:8px">
+       <textarea class="form-input" v-model="newTask.description" placeholder="任务描述 (可选)" rows="2" style="margin-bottom:8px;resize:vertical"></textarea>
+       <div style="display:flex; gap:8px; margin-top:8px">
+         <button class="btn btn-primary btn-sm" @click="createTask">创建</button>
+         <button class="btn btn-secondary btn-sm" @click="showTaskModal=false">取消</button>
+       </div>
+     </div>
+   </div>
+   <!-- Phase 4: 任务详情 Modal -->
+   <div class="modal-overlay" v-if="showTaskDetail" @click.self="closeTaskDetail">
+     <div class="modal-card task-detail-modal">
+       <div v-if="taskDetailLoading" class="loading">加载中...</div>
+       <div v-else-if="taskDetail">
+         <div class="task-detail-header">
+           <div class="task-detail-title">{{ taskDetail.task.title }}</div>
+           <div class="task-detail-tags">
+             <span class="tag" :class="'priority-' + (taskDetail.task.priority || 'medium')">{{ taskDetail.task.priority || 'medium' }}</span>
+             <span class="tag" :class="'status-' + taskDetail.task.status">{{ taskDetail.task.status }}</span>
+             <span class="tag tag-source" v-if="taskDetail.task.source">{{ taskDetail.task.source }}</span>
+             <span class="tag tag-project" v-if="taskDetail.task.project">📁 {{ taskDetail.task.project }}</span>
+           </div>
+           <button class="btn btn-sm btn-secondary" @click="closeTaskDetail" style="float:right">✕</button>
+         </div>
+         <div class="task-detail-body">
+           <!-- 基本信息 -->
+           <div class="td-section" v-if="taskDetail.task.description">
+             <div class="td-label">描述</div>
+             <div class="td-content">{{ taskDetail.task.description }}</div>
+           </div>
+           <div class="td-section">
+             <div class="td-label">指派</div>
+             <div class="td-content">
+               <span v-if="taskDetail.student">{{ taskDetail.student.name }} ({{ taskDetail.student.id }}) - {{ taskDetail.student.project }}</span>
+               <span v-else-if="taskDetail.task.owner_name">{{ taskDetail.task.owner_name }}</span>
+               <span v-else class="text-muted">未指派</span>
+             </div>
+           </div>
+           <div class="td-section" v-if="taskDetail.task.deadline">
+             <div class="td-label">截止日期</div>
+             <div class="td-content" :class="{overdue: isOverdue(taskDetail.task)}">{{ taskDetail.task.deadline }}</div>
+           </div>
+           <!-- 来源会议 -->
+           <div class="td-section" v-if="taskDetail.source_meeting">
+             <div class="td-label">来源会议 ({{ taskDetail.source_meeting.date }})</div>
+             <div class="td-content">
+               <div v-if="taskDetail.source_meeting.action">
+                 <strong>{{ taskDetail.source_meeting.action.task }}</strong>
+                 <span class="text-muted" v-if="taskDetail.source_meeting.action.context"> - {{ taskDetail.source_meeting.action.context }}</span>
+               </div>
+               <div v-if="taskDetail.source_meeting.decisions?.length">
+                 <div class="td-sublabel">决议:</div>
+                 <ul><li v-for="d in taskDetail.source_meeting.decisions" :key="d">{{ d }}</li></ul>
+               </div>
+             </div>
+           </div>
+           <!-- 来源周报 -->
+           <div class="td-section" v-if="taskDetail.source_report">
+             <div class="td-label">来源周报总结</div>
+             <div class="td-content">
+               <div>{{ taskDetail.source_report.summary }}</div>
+               <div v-if="taskDetail.source_report.risks?.length" class="td-sublabel" style="margin-top:4px">
+                 风险: <span class="card-risk" v-for="r in taskDetail.source_report.risks" :key="r" style="margin-right:4px">{{ r }}</span>
+               </div>
+             </div>
+           </div>
+           <!-- 本体关联 -->
+           <div class="td-section" v-if="taskDetail.ontology_links?.length">
+             <div class="td-label">关联实体</div>
+             <div class="td-content">
+               <span class="tag" v-for="link in taskDetail.ontology_links" :key="link.id" style="margin:2px">
+                 {{ link.type }}: {{ link.label || link.id }}
+               </span>
+             </div>
+           </div>
+           <!-- 状态转换历史 -->
+           <div class="td-section" v-if="taskDetail.transition_history?.length">
+             <div class="td-label">状态变更历史</div>
+             <div class="td-content">
+               <div v-for="(th, i) in taskDetail.transition_history" :key="i" class="transition-row">
+                 <span class="tag" :class="'status-' + th.from">{{ th.from }}</span>
+                 →
+                 <span class="tag" :class="'status-' + th.to">{{ th.to }}</span>
+                 <span class="text-muted" style="font-size:11px">{{ th.timestamp?.slice(0, 16) }}</span>
+                 <span v-if="th.evidence" class="text-muted" style="font-size:11px">| {{ th.evidence }}</span>
+               </div>
+             </div>
+           </div>
+         </div>
+       </div>
+     </div>
+   </div>
   </div>
   <!-- AI 工具箱 Tab (Feature 6/16) -->
   <div v-if="activeTab==='skills'" class="skills-view">
@@ -1322,7 +1462,7 @@
 
 
 
-<script src="/js/api.js?v=0714"></script>
-<script src="/js/teacher.js?v=0714"></script>
+<script src="/js/api.js?v=0715"></script>
+<script src="/js/teacher.js?v=0715"></script>
 </body>
 </html>

@@ -1,0 +1,73 @@
+{
+  "promises": [
+    {
+      "promise_id": "P-001",
+      "meeting_date": "2026-08-21",
+      "promiser_student_id": "s01",
+      "promiser_name": "宋禧",
+      "promise": "Test promise: finish baseline simulation",
+      "deadline": "2026-08-28",
+      "promisee": "汤老师",
+      "source_section": "Action Items",
+      "status": "fulfilled",
+      "fulfilled_at": "2026-08-21T14:39:02.811Z",
+      "fulfillment_evidence": "test",
+      "task_id": null,
+      "unmatched": false,
+      "created_at": "2026-08-21T14:39:02.798Z",
+      "updated_at": "2026-08-21T14:39:02.811Z"
+    },
+    {
+      "promise_id": "P-002",
+      "meeting_date": "2026-08-18",
+      "promiser_student_id": "s01",
+      "promiser_name": "宋禧",
+      "promise": "实现Benders分解版本",
+      "deadline": "2026-08-25",
+      "promisee": "汤老师",
+      "source_section": "Action Items",
+      "status": "pending",
+      "fulfilled_at": null,
+      "fulfillment_evidence": "",
+      "task_id": null,
+      "unmatched": false,
+      "created_at": "2026-08-21T14:40:06.019Z",
+      "updated_at": "2026-08-21T14:40:06.019Z"
+    },
+    {
+      "promise_id": "P-003",
+      "meeting_date": "2026-08-18",
+      "promiser_student_id": "s02",
+      "promiser_name": "常申奥",
+      "promise": "补充氢能算例，至少增加69节点系统",
+      "deadline": "",
+      "promisee": "汤老师",
+      "source_section": "Action Items",
+      "status": "pending",
+      "fulfilled_at": null,
+      "fulfillment_evidence": "",
+      "task_id": null,
+      "unmatched": false,
+      "created_at": "2026-08-21T14:40:06.031Z",
+      "updated_at": "2026-08-21T14:40:06.031Z"
+    },
+    {
+      "promise_id": "P-004",
+      "meeting_date": "2026-08-18",
+      "promiser_student_id": "s03",
+      "promiser_name": "陈光",
+      "promise": "和宋禧对齐V2G接口，完成接口文档",
+      "deadline": "",
+      "promisee": "汤老师",
+      "source_section": "Action Items",
+      "status": "pending",
+      "fulfilled_at": null,
+      "fulfillment_evidence": "",
+      "task_id": null,
+      "unmatched": false,
+      "created_at": "2026-08-21T14:40:06.039Z",
+      "updated_at": "2026-08-21T14:40:06.039Z"
+    }
+  ],
+  "next_id": 5
+}
