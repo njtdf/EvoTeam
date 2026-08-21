@@ -37,6 +37,14 @@ Remove-Item script.mjs
 - DEVLOG.md **只追加**, 不覆盖, 不删除历史
 - git commit message 格式: `feat: vX.Y.Z 简述` 或 `fix: 简述`
 
+## 文档位置 (2026-08-21 追加)
+
+ - **DEVLOG.md / CHANGELOG.md / MANUAL-VERIFICATION-GUIDE.md 只存放在 `D:\OneDrive\7-SideWork\AutoProf\` (父目录)**
+ - cordis-main/ 内不保留这些文件的副本
+ - 写 DEVLOG: 用 node 脚本 appendFileSync 到 `../DEVLOG.md` (相对于 cordis-main/)
+ - 写 CHANGELOG: 用 node 脚本 writeFileSync 到 `../CHANGELOG.md`
+ - git 追踪: 这些文件在 .gitignore 中 (父目录非 git 仓库)
+
 ## 额外教训 (2026-08-20 追加)
 
 - **版本不匹配 = 无限重载 = 全部空白页**: api.js 的 checkVersion() 在 server 版本 ≠ client 版本时调用 window.location.reload()，如果没有 localStorage 防护，会无限循环导致 Vue 永远无法 mount。**每次改 APP_VERSION 必须同步改 VERSION 文件**，否则所有页面空白。
