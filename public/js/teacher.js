@@ -1,4 +1,4 @@
-﻿const { createApp, ref, computed, onMounted, nextTick, watch } = Vue
+const { createApp, ref, computed, onMounted, nextTick, watch } = Vue
 
 createApp({
   setup() {
@@ -711,6 +711,7 @@ createApp({
       try {
         const r = await fetch(`/api/valuecycle/${id}`)
         if (r.ok) selectedVcStudent.value = await r.json()
+        await loadDecisions(id)
       } catch (e) { console.error('selectVcStudent:', e.message) }
     }
 
@@ -772,15 +773,52 @@ createApp({
       if (!selectedVcStudent.value || !newDecision.value.text) return
       try {
         const id = selectedVcStudent.value.student_id
-        const r = await fetch(`/api/valuecycle/${id}/decision`, {
+        const r = await fetch(`/api/decisions/${id}`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ decision: newDecision.value.text, rationale: newDecision.value.rationale })
         })
         if (r.ok) {
-          selectedVcStudent.value = (await r.json()).valuecycle
+          const data = await r.json()
+          if (data.valuecycle?.decision_log) selectedVcStudent.value.decision_log = data.valuecycle.decision_log
+          await loadDecisions(id)
           newDecision.value = { text: '', rationale: '' }
         }
       } catch (e) { console.error('addDecision:', e.message) }
+    }
+
+    const decisionsList = ref([])
+    const decisionsStats = ref(null)
+
+    async function loadDecisions(studentId) {
+      try {
+        const r = await fetch(`/api/decisions/${studentId}`)
+        if (r.ok) {
+          const data = await r.json()
+          decisionsList.value = data.decisions || []
+          decisionsStats.value = data.stats || null
+        }
+      } catch (e) { console.error('loadDecisions:', e.message) }
+    }
+
+    async function deleteDecision(decisionId) {
+      if (!selectedVcStudent.value) return
+      const id = selectedVcStudent.value.student_id
+      try {
+        const r = await fetch(`/api/decisions/${id}/${decisionId}`, { method: 'DELETE' })
+        if (r.ok) { await loadDecisions(id) }
+      } catch (e) { console.error('deleteDecision:', e.message) }
+    }
+
+    async function updateDecisionOutcome(decisionId, outcome) {
+      if (!selectedVcStudent.value) return
+      const id = selectedVcStudent.value.student_id
+      try {
+        const r = await fetch(`/api/decisions/${id}/${decisionId}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ outcome })
+        })
+        if (r.ok) { await loadDecisions(id) }
+      } catch (e) { console.error('updateDecisionOutcome:', e.message) }
     }
    // --- Agent 面板 ---
   const agents = ref([
@@ -1315,6 +1353,7 @@ return {
       switchToValueCycle, loadGroupVc, loadAlignments, selectVcStudent, saveVcAssessment,
       // v2.1 W6a
       capabilityLabels, newDecision, saveGraduation, saveCapability, addDecision,
+      decisionsList, decisionsStats, loadDecisions, deleteDecision, updateDecisionOutcome,
       chatInput, chatStreaming, loadingReport, reportHtml, chatMessagesEl,
      onStudentChange, sendChat, logout,
      formatMessage,

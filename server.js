@@ -24,7 +24,7 @@ import {
 } from './lib/meeting.js'
 import { WebSocketServer } from 'ws'
 import {
-  createTask, updateTask, deleteTask, getAllTasks, getTasksByStudent,
+  loadTasks, createTask, updateTask, deleteTask, getAllTasks, getTasksByStudent,
   getBoardStats, promoteMeetingAction,
 } from './lib/kanban.js'
 import { getLatestNews } from './lib/rss.js'
@@ -50,6 +50,9 @@ import { indexAll, searchKnowledge, getDocumentStats, getKnowledgeGraph } from '
 import { getRequirementsTemplate, getRequirementCategories, seedGraduationRequirements, updateRequirement, getGraduationSummary, getAllGraduationSummaries, syncToDb as syncGraduationToDb, indexToKb as indexGraduationToKb } from './lib/graduation.js'
 
 import { createDecision, listDecisions, getDecision, updateDecision, deleteDecision, updateOutcome, getAllDecisions, getDecisionStats } from './lib/decisions.js'
+
+import { canTransition, getValidTransitions, transitionTask } from './lib/kanban.js'
+import { getLabState, recordReward, getRewards, getLabRewardSummary, deleteReward } from './lib/lab-state.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const labosDir = join(__dirname, 'labos')
@@ -693,6 +696,48 @@ app.post('/api/tasks/from-meeting', requireRole('teacher'), (req, res) => {
 
 app.get('/api/board/stats', requireRole('teacher'), (req, res) => {
   res.json({ stats: getBoardStats() })
+})
+
+// --- API: Kanban State Machine (W7b) ---
+app.get('/api/tasks/:id/transitions', requireAuth, (req, res) => {
+  const data = loadTasks()
+  const task = data.tasks.find(t => t.task_id === req.params.id)
+  if (!task) return res.status(404).json({ error: 'not found' })
+  res.json({ current: task.status, valid: getValidTransitions(task.status) })
+})
+
+app.post('/api/tasks/:id/transition', requireAuth, async (req, res) => {
+  const { newStatus, evidence } = req.body
+  if (!newStatus) return res.status(400).json({ error: 'newStatus required' })
+  const result = transitionTask(req.params.id, newStatus, evidence || '')
+  if (!result.ok) return res.status(400).json(result)
+  res.json(result)
+})
+
+// --- API: Lab State + Rewards (W8) ---
+app.get('/api/lab-state', requireRole('teacher'), async (req, res) => {
+  const state = await getLabState()
+  res.json(state)
+})
+
+app.get('/api/rewards/:studentId', requireAuth, (req, res) => {
+  res.json({ rewards: getRewards(req.params.studentId) })
+})
+
+app.post('/api/rewards/:studentId', requireRole('teacher'), (req, res) => {
+  const { signal, context } = req.body
+  if (!signal) return res.status(400).json({ error: 'signal required' })
+  const r = recordReward(req.params.studentId, signal, context || '')
+  res.json({ ok: true, reward: r })
+})
+
+app.get('/api/rewards', requireRole('teacher'), (req, res) => {
+  res.json(getLabRewardSummary())
+})
+
+app.delete('/api/rewards/:rewardId', requireRole('teacher'), (req, res) => {
+  const ok = deleteReward(req.params.rewardId)
+  res.json({ ok })
 })
 
 // --- API: RSS News (Feature 9) ---

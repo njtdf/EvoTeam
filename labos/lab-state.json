@@ -1,0 +1,156 @@
+{
+  "timestamp": "2026-08-21T04:14:07.259Z",
+  "students": {
+    "total": 15,
+    "by_role": {
+      "grad": 12,
+      "undergrad": 3
+    }
+  },
+  "tasks": {
+    "total": 40,
+    "by_status": {
+      "todo": 36,
+      "in_progress": 1,
+      "done": 3,
+      "blocked": 0
+    },
+    "overdue": 0
+  },
+  "reports": {
+    "submitted": 12,
+    "missing": 3
+  },
+  "rewards": {
+    "total": 0,
+    "recent": []
+  },
+  "risks": [
+    {
+      "student_id": "s01",
+      "student_name": "宋禧",
+      "risk": "progress stalled"
+    },
+    {
+      "student_id": "s02",
+      "student_name": "常申奥",
+      "risk": "progress stalled"
+    },
+    {
+      "student_id": "s02",
+      "student_name": "常申奥",
+      "risk": "direction drift"
+    },
+    {
+      "student_id": "s03",
+      "student_name": "陈光",
+      "risk": "模型收敛速度较慢，可能影响仿真效率"
+    },
+    {
+      "student_id": "s03",
+      "student_name": "陈光",
+      "risk": "极端天气场景生成参数需要校准，可能影响数据质量"
+    },
+    {
+      "student_id": "s04",
+      "student_name": "冯志斌",
+      "risk": "progress stalled"
+    },
+    {
+      "student_id": "s04",
+      "student_name": "冯志斌",
+      "risk": "data quality issue"
+    },
+    {
+      "student_id": "s05",
+      "student_name": "李吴磊",
+      "risk": "渗透阈值与网络拓扑结构的关系分析不足，可能影响结论的深度"
+    },
+    {
+      "student_id": "s05",
+      "student_name": "李吴磊",
+      "risk": "交通流与充电负荷的耦合模型仍需完善，可能影响仿真准确性"
+    },
+    {
+      "student_id": "s06",
+      "student_name": "张明潇",
+      "risk": "数据质量：实验数据波动较大，可能影响结论可靠性"
+    },
+    {
+      "student_id": "s06",
+      "student_name": "张明潇",
+      "risk": "进度：剩余实验和报告撰写时间紧张"
+    },
+    {
+      "student_id": "s07",
+      "student_name": "薛隆奇",
+      "risk": "progress stalled"
+    },
+    {
+      "student_id": "s07",
+      "student_name": "薛隆奇",
+      "risk": "direction drift"
+    },
+    {
+      "student_id": "s08",
+      "student_name": "阎吉瑜",
+      "risk": "progress stalled"
+    },
+    {
+      "student_id": "s08",
+      "student_name": "阎吉瑜",
+      "risk": "technical blocker"
+    },
+    {
+      "student_id": "s08",
+      "student_name": "阎吉瑜",
+      "risk": "resource shortage"
+    },
+    {
+      "student_id": "s09",
+      "student_name": "李骏鹏",
+      "risk": "direction drift"
+    },
+    {
+      "student_id": "s09",
+      "student_name": "李骏鹏",
+      "risk": "progress stalled"
+    },
+    {
+      "student_id": "s10",
+      "student_name": "旷嘉庆",
+      "risk": "技术 blocker：对Python和仿真工具掌握不够熟练，可能影响后续研究"
+    },
+    {
+      "student_id": "s10",
+      "student_name": "旷嘉庆",
+      "risk": "方向 drift：尚未确定具体研究问题，需要更多指导"
+    },
+    {
+      "student_id": "s11",
+      "student_name": "王晗",
+      "risk": "理论框架的数学表述需要进一步完善，可能影响后续仿真工作"
+    },
+    {
+      "student_id": "s11",
+      "student_name": "王晗",
+      "risk": "数据来源需要确认，存在数据质量风险"
+    },
+    {
+      "student_id": "s11",
+      "student_name": "王晗",
+      "risk": "极端天气场景建模不够完善，可能影响研究准确性"
+    },
+    {
+      "student_id": "s12",
+      "student_name": "杨凯杰",
+      "risk": "technical blocker: OpenDSS使用不熟练，可能影响后续仿真进度"
+    },
+    {
+      "student_id": "s12",
+      "student_name": "杨凯杰",
+      "risk": "resource shortage: 需要更多OpenDSS学习资源"
+    }
+  ],
+  "summary": "15 students | 12/15 reported | 40 tasks (0 overdue) | 0 rewards"
+}
