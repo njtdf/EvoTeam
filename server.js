@@ -40,6 +40,7 @@ import { loadInvoices, addInvoice, updateInvoice, deleteInvoice, getInvoiceStats
 import { loadMemory, updateMemory, accumulateFromReport, accumulateFromChat, accumulateFromSkill, accumulateFromTask, getContextString, injectContext } from './lib/memory.js'
 import { createRoom, listRooms, getRoom, addMessage, joinRoom, leaveRoom, deleteRoom, shouldTriggerAI, buildAIContext, addClient, broadcast } from './lib/chatroom.js'
 import { buildStudentContext } from './lib/ai-context.js'
+import { getEntityGraph, buildAllEntities, buildRelations, searchEntities, addRelation, removeRelation, applyNaturalLanguage, getOntologyStats } from './lib/ontology.js'
 import { loadValueCycle, updateValueCycle, loadGroupValueCycle, saveGroupValueCycle, getAllAlignments } from './lib/valuecycle.js'
 import { loadCalendarEvents } from './lib/calendar.js'
 import { searchTrajectories, getTrajectoryStats, listTrajectories } from './lib/trajectory.js'
@@ -1631,6 +1632,73 @@ app.get('/api/kb/graph', requireRole('teacher'), (req, res) => {
 })
 
 // --- Start ---
+
+// ============================================================
+// Ontology API (Roadmap 2.2 Phase 1)
+// ============================================================
+app.get('/api/ontology/stats', requireRole('teacher'), (req, res) => {
+  try {
+    res.json(getOntologyStats());
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/ontology/entities', requireAuth, (req, res) => {
+  try {
+    res.json(buildAllEntities());
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/ontology/graph/:type/:id', requireAuth, (req, res) => {
+  try {
+    const graph = getEntityGraph(req.params.type, req.params.id);
+    res.json(graph);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/ontology/search', requireAuth, (req, res) => {
+  try {
+    const q = req.query.q || '';
+    res.json(searchEntities(q));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/ontology/relation', requireRole('teacher'), (req, res) => {
+  try {
+    const { from_type, from_id, to_type, to_id, type, metadata } = req.body;
+    const rel = addRelation(from_type, from_id, to_type, to_id, type, metadata);
+    res.json(rel);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/ontology/relation/:id', requireRole('teacher'), (req, res) => {
+  try {
+    const ok = removeRelation(req.params.id);
+    res.json({ success: ok });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/ontology/nl', requireRole('teacher'), (req, res) => {
+  try {
+    const text = req.body.text || '';
+    const result = applyNaturalLanguage(text);
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 const server = app.listen(PORT, () => {
   console.log(`\n  AutoProf Lab Brief v2 ready:`)
   console.log(`  Login:    http://localhost:${PORT}/login`)

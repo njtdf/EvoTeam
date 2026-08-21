@@ -1,0 +1,39 @@
+{
+  "manual_relations": [
+    {
+      "id": "manual-1787316010583",
+      "from_type": "student",
+      "from_id": "s01",
+      "to_type": "project",
+      "to_id": "AI",
+      "type": "belongs_to",
+      "metadata": {},
+      "created_at": "2026-08-21T12:40:10.583Z"
+    },
+    {
+      "id": "manual-1787316010594",
+      "from_type": "student",
+      "from_id": "s05",
+      "to_type": "task",
+      "to_id": "V2G仿真实验",
+      "type": "assigned",
+      "metadata": {},
+      "created_at": "2026-08-21T12:40:10.594Z"
+    },
+    {
+      "id": "manual-1787316230091",
+      "from_type": "student",
+      "from_id": "s01",
+      "to_type": "project",
+      "to_id": "AI",
+      "type": "belongs_to",
+      "metadata": {},
+      "created_at": "2026-08-21T12:43:50.091Z"
+    }
+  ],
+  "custom_entities": [],
+  "metadata": {
+    "created_at": "2026-08-21T12:40:10.583Z",
+    "updated_at": "2026-08-21T12:43:50.092Z"
+  }
+}
