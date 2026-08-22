@@ -498,6 +498,7 @@ async function switchToDashboard() {
 
     // Sync URL hash when tab changes (so refresh/bookmark keeps current tab)
     watch(activeTab, (newTab) => {
+      autoSwitchAgent(newTab)
       if (window.location.hash !== '#' + newTab) {
         history.replaceState(null, '', '#' + newTab)
       }
@@ -1594,7 +1595,32 @@ e
       return idea.liked_by && idea.liked_by.includes(user.value.id)
     }
 
-    // ===== Global Chat Bar =====
+    // ===== C-Level Agents (global chat bar dropdown) =====
+const cAgents = [
+  { id: 'ceo', icon: '👨‍⚖️', shortName: 'CEO', name: '首席执行官', role: '战略决策', gradient: 'linear-gradient(135deg,#1e3a5f,#2980b9)' },
+  { id: 'cfo', icon: '💰', shortName: 'CFO', name: '首席财务官', role: '经费管理', gradient: 'linear-gradient(135deg,#27ae60,#2ecc71)' },
+  { id: 'cto', icon: '🔧', shortName: 'CTO', name: '首席技术官', role: '技术方向', gradient: 'linear-gradient(135deg,#8e44ad,#9b59b6)' },
+  { id: 'cmo', icon: '📢', shortName: 'CMO', name: '首席营销官', role: '学术影响', gradient: 'linear-gradient(135deg,#e74c3c,#c0392b)' },
+  { id: 'caio', icon: '🤖', shortName: 'CAIO', name: '首席AI官', role: 'AI策略', gradient: 'linear-gradient(135deg,#16a085,#1abc9c)' },
+  { id: 'cbo', icon: '🤝', shortName: 'CBO', name: '首席商务官', role: '产学研', gradient: 'linear-gradient(135deg,#d35400,#e67e22)' },
+  { id: 'cho', icon: '🎓', shortName: 'CHO', name: '首席人才官', role: '学生培养', gradient: 'linear-gradient(135deg,#2c3e50,#34495e)' },
+]
+const tabAgentMap = {
+  dashboard:'ceo', todo:'ceo', notify:'ceo', calendar:'ceo', projects:'cto',
+  valuecycle:'ceo', knowledge:'caio', cockpit:'cho', meeting:'ceo',
+  kanban:'cto', revision:'cmo', graduation:'cho', agents:'caio',
+  ideas:'caio', skills:'cto', submissions:'cmo', review:'cmo',
+  exam:'cho', teaching:'cho', course:'cho', invoice:'cfo',
+  workload:'cho', interview:'cho', profile:'cho', dailybrief:'ceo',
+}
+const globalChatAgentId = ref('ceo')
+const globalChatAgent = computed(() => cAgents.find(a => a.id === globalChatAgentId.value) || cAgents[0])
+function autoSwitchAgent(tab) {
+  const a = tabAgentMap[tab] || 'ceo'
+  globalChatAgentId.value = a
+}
+
+// ===== Global Chat Bar =====
     const globalChatExpanded = ref(false)
     const globalChatMessages = ref([])
     const globalChatInput = ref('')
@@ -1609,7 +1635,7 @@ e
       globalChatMessages.value.push({ role: 'user', content: msg })
       globalChatMessages.value.push({ role: 'assistant', content: '', _streaming: true })
       try {
-        await streamChat('/api/global-chat', { message: msg }, (chunk) => {
+        await streamChat('/api/global-chat', { message: msg, agent_id: globalChatAgentId.value }, (chunk) => {
           const last = globalChatMessages.value[globalChatMessages.value.length - 1]
           if (last && last.role === 'assistant' && last._streaming) {
             last.content += chunk
@@ -1644,6 +1670,7 @@ e
      reportContext,
      onStudentChange, sendChat, logout,
      formatMessage, globalChatExpanded, globalChatMessages, globalChatInput, globalChatStreaming, globalChatEl, sendGlobalChat,
+     cAgents, globalChatAgentId, globalChatAgent, autoSwitchAgent,
      switchToCockpit,
      // 总览
       dashboardData, loadingDashboard, briefGenerating,

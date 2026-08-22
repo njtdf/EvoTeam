@@ -832,7 +832,7 @@ status: "on_track"
     const globalChatExpanded = ref(false)
     const globalChatMessages = ref([])
     const globalChatInput = ref('')
-    const globalChatStreaming = ref(false)
+    const globalChatAgentId: 'caio', globalChatStreaming = ref(false)
     const globalChatEl = ref(null)
 
     async function sendGlobalChat() {
@@ -843,7 +843,7 @@ status: "on_track"
       globalChatMessages.value.push({ role: 'user', content: msg })
       globalChatMessages.value.push({ role: 'assistant', content: '', _streaming: true })
       try {
-        await streamChat('/api/global-chat', { message: msg }, (chunk) => {
+        await streamChat('/api/global-chat', { message: msg, agent_id: 'caio' }, (chunk) => {
           const last = globalChatMessages.value[globalChatMessages.value.length - 1]
           if (last && last.role === 'assistant' && last._streaming) {
             last.content += chunk

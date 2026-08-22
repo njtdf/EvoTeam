@@ -1883,3 +1883,20 @@ body {
   font-size: 13px;
   padding: 4px 10px;
 }
+
+
+.global-chat-agent-select select {
+  border: 1px solid var(--border, #ddd);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 13px;
+  background: var(--bg-card, #fff);
+  color: var(--text, #333);
+  cursor: pointer;
+  outline: none;
+  max-width: 200px;
+}
+.global-chat-agent-select select:focus {
+  border-color: var(--primary, #4a6fa5);
+  box-shadow: 0 0 0 2px rgba(74,111,165,0.15);
+}

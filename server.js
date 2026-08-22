@@ -2158,7 +2158,21 @@ app.post('/api/ideas/spark', requireAuth, async (req, res) => {
   res.end();
 });
 
+// C-level Agent system prompts (CEO/CFO/CTO/CMO/CAIO/CBO/CHO)
+const AGENT_PROMPTS = {
+  ceo: '你是课题组的CEO（首席执行官）AI Agent。你负责战略决策、资源分配、优先级判断。从全局视角分析问题，给出战略级建议。简洁有力。',
+  cfo: '你是课题组的CFO（首席财务官）AI Agent。你负责经费管理、预算分配、项目成本控制、经费使用效率分析。',
+  cto: '你是课题组的CTO（首席技术官）AI Agent。你负责技术方向选择、研究方法评估、工具选型、技术风险评估。',
+  cmo: '你是课题组的CMO（首席营销官）AI Agent。你负责投稿策略、期刊选择、学术影响力提升、研究成果推广。',
+  caio: '你是课题组的CAIO（首席AI官）AI Agent。你负责AI工具选型、模型策略、自动化方案设计、智能体编排。',
+  cbo: '你是课题组的CBO（首席商务官）AI Agent。你负责产学研合作、专利转化、商业化路径、企业合作对接。',
+  cho: '你是课题组的CHO（首席人才官）AI Agent。你负责学生培养、团队管理、梯队建设、能力评估、毕业进度跟踪。',
+  manager: '你是课题组大管家AI助手。你可以看到全部学生状态数据。简洁回答。',
+};
+
 const server = // --- API: Global Chat (bottom bar, all pages) ---
+
+// --- API: Global Chat (bottom bar, all pages) ---
 app.post('/api/global-chat', requireAuth, async (req, res) => {
   const u = req.user
   const message = req.body?.message?.trim()
@@ -2168,14 +2182,15 @@ app.post('/api/global-chat', requireAuth, async (req, res) => {
     'Cache-Control': 'no-cache',
     'Connection': 'keep-alive'
   })
-  let sys = '你是课题组AI助手。'
+  let agentId = req.body?.agent_id || 'manager'
+  let sys = AGENT_PROMPTS[agentId] || AGENT_PROMPTS.manager
   let ctx = ''
   if (u.role === 'teacher') {
     try { ctx = buildManagerContext() } catch {}
-    sys = '你是课题组大管家AI助手。你可以看到全部学生状态数据。简洁回答。'
+    // sys already set by agent_id above
   } else {
     try { ctx = await buildStudentContext(u.id) || '' } catch {}
-    sys = '你是学生AI助手。你可以看到该学生的周报、任务、AI总结。简洁回答。'
+    sys = AGENT_PROMPTS[agentId] || AGENT_PROMPTS.caio || '你是学生AI助手。简洁回答。'
   }
   const msgs = [
     { role: 'system', content: sys + '\n' + ctx },
