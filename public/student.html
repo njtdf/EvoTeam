@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EvoTeam - Student</title>
-<link rel="stylesheet" href="/css/app.css?v=0719">
+<link rel="stylesheet" href="/css/app.css?v=0720">
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -37,18 +37,26 @@
     <main class="main-content">
   <!-- 周报 Tab -->
   <div v-if="activeTab==='report'">
-    <div style="padding:12px; display:flex; gap:8px; align-items:center;">
-      <button class="btn btn-secondary btn-sm" @click="loadTemplate">模板</button>
-      <button class="btn btn-secondary btn-sm" @click="clearEditor">清空</button>
-      <button class="btn btn-secondary btn-sm" @click="toggleActions">我的会议行动<span v-if="myActions.length"> ({{ myActions.length }})</span></button>
-      <button class="btn btn-secondary btn-sm" @click="toggleFeedback">上次反馈<span v-if="reportContext"> ({{ (reportContext.open_tasks?.length||0) + (reportContext.meeting_actions?.length||0) }})</span></button>
-      <button class="btn btn-primary btn-sm" :disabled="draftLoading" @click="generateDraft">
-        {{ draftLoading ? 'AI 生成中...' : '🤖 AI 辅助填写' }}
-      </button>
-      <span class="spacer" style="flex:1"></span>
-      <button class="btn btn-primary btn-sm" :disabled="submitting" @click="doSubmit">
-        {{ submitting ? '提交中...' : '提交周报' }}
-      </button>
+    <div class="report-toolbar">
+      <div class="report-toolbar-left">
+        <button class="btn btn-primary" @click="startNewReport">
+          ✏️ {{ markdown ? '继续编辑' : '写周报' }}
+        </button>
+        <button class="btn btn-secondary btn-sm" @click="toggleHistory">
+          📋 历史周报<span v-if="reportHistory.length"> ({{ reportHistory.length }})</span>
+        </button>
+        <button class="btn btn-secondary btn-sm" @click="toggleFeedback">上次反馈<span v-if="reportContext"> ({{ (reportContext.open_tasks?.length||0) + (reportContext.meeting_actions?.length||0) }})</span></button>
+        <button class="btn btn-secondary btn-sm" @click="toggleActions">会议行动<span v-if="myActions.length"> ({{ myActions.length }})</span></button>
+      </div>
+      <div class="report-toolbar-right">
+        <button class="btn btn-secondary btn-sm" :disabled="draftLoading" @click="generateDraft">
+          {{ draftLoading ? 'AI 生成中...' : '🤖 AI 草稿' }}
+        </button>
+        <button class="btn btn-secondary btn-sm" @click="clearEditor">清空</button>
+        <button class="btn btn-success" :disabled="submitting" @click="doSubmit">
+          {{ submitting ? '提交中...' : '📤 提交' }}
+        </button>
+      </div>
     </div>
     <div v-if="showActions" class="card" style="margin:0 12px 12px">
       <div class="card-title">我的会议行动 <span class="tag" v-if="myActions.length">{{ myActions.length }}</span></div>
@@ -128,7 +136,32 @@
         暂无历史反馈。提交周报后 AI 会自动生成总结并回流到知识库。
       </div>
     </div>
-    <div class="split-pane" style="height:calc(100vh - 100px)">
+    <!-- 周报历史列表 -->
+    <div v-if="showHistory && !historyViewReport" class="card" style="margin:0 12px 12px">
+      <div class="card-title">📋 周报历史 <span class="tag" v-if="reportHistory.length">{{ reportHistory.length }}</span></div>
+      <div v-if="reportHistory.length === 0" class="empty-state" style="padding:16px">还没有历史周报，写完提交后会显示在这里。</div>
+      <div v-else class="report-history-list">
+        <div v-for="r in reportHistory" :key="r.filename" class="report-history-item" @click="viewHistoryReport(r.filename)">
+          <div class="rh-left">
+            <span class="rh-filename mono">{{ r.filename }}</span>
+            <span class="rh-period text-muted" v-if="r.period_start">{{ r.period_start }} ~ {{ r.period_end }}</span>
+          </div>
+          <div class="rh-right">
+            <span class="tag" :class="'tag-' + (r.status || 'on_track').replace('_','-')">{{ r.status }}</span>
+          </div>
+          <div class="rh-excerpt" v-if="r.excerpt">{{ r.excerpt }}</div>
+        </div>
+      </div>
+    </div>
+    <!-- 历史周报查看 -->
+    <div v-if="historyViewReport" class="card" style="margin:0 12px 12px">
+      <div class="card-title">
+        📍 {{ historyViewReport.meta?.name || '' }} - {{ historyViewReport.file_path?.split(/[\\/]/).pop() || '' }}
+        <button class="btn btn-secondary btn-sm" style="float:right" @click="closeHistoryView">返回</button>
+      </div>
+      <div class="md-preview" v-html="formatHistoryReport()"></div>
+    </div>
+    <div class="split-pane" style="height:calc(100vh - 100px)" v-if="!historyViewReport && !showHistory">
       <div class="pane-left" style="display:flex; flex-direction:column">
         <textarea class="md-editor" v-model="markdown" @input="updatePreview"
           placeholder="在此输入双周报 Markdown..."></textarea>
@@ -137,7 +170,7 @@
         <div class="md-preview" v-html="previewHtml"></div>
       </div>
     </div>
-    <div v-if="summary" class="card" style="position:fixed; bottom:0; left:0; right:0; max-height:40%; overflow-y:auto; z-index:200">
+    <div v-if="summary" class="card" style="margin:0 12px 12px; max-height:300px; overflow-y:auto">
       <div class="card-title">AI 总结</div>
       <div class="summary-section">
         <div class="summary-label">总结</div>
@@ -575,7 +608,7 @@
 </main>
   </div>
 </div>
-<script src="/js/api.js?v=0719"></script>
-<script src="/js/student.js?v=0719"></script>
+<script src="/js/api.js?v=0720"></script>
+<script src="/js/student.js?v=0720"></script>
 </body>
 </html>

@@ -18,6 +18,10 @@ createApp({
     const myActions = ref([])
     const showActions = ref(false)
     const actionsLoading = ref(false)
+  // --- 周报历史 ---
+  const reportHistory = ref([])
+  const showHistory = ref(false)
+  const historyViewReport = ref(null) // {raw, meta} or null
     // --- 看板 ---
     const activeTab = ref('report')
     const tasks = ref([])
@@ -51,13 +55,18 @@ createApp({
       try { return marked.parse(content) } catch { return content }
     }
 
+    function formatHistoryReport() {
+      if (!historyViewReport.value || !historyViewReport.value.raw) return ''
+      try { return marked.parse(historyViewReport.value.raw) } catch { return historyViewReport.value.raw }
+    }
+
     function generateTemplate() {
       const now = new Date()
       const start = new Date(now.getTime() - 14 * 86400000)
       const fmt = d => d.toISOString().slice(0, 10)
       const u = user.value
       return `---
-title: "Bi-Weekly Report"
+title: "双周报"
 student_id: "${u?.id || ''}"
 name: "${u?.name || ''}"
 project: "${u?.project || ''}"
@@ -67,35 +76,35 @@ submitted_at: "${now.toISOString()}"
 status: "on_track"
 ---
 
-## 1. Progress
+## 1. 本周进展
 
 1)
 2)
 3)
 
-## 2. Comments and Concerns
+## 2. 问题与困难
 
 1)
 
-## 3. Activities
-
-1)
-2)
-3)
-
-## 4. Work Planned Next Two Weeks
+## 3. 本周活动
 
 1)
 2)
 3)
 
-## 5. Service Work Done
+## 4. 下两周计划
+
+1)
+2)
+3)
+
+## 5. 服务工作
 
 1)
 
-## 6. Attachments
+## 6. 附件
 
-- (none)
+- (无)
 `
     }
 
@@ -103,13 +112,13 @@ status: "on_track"
     function clearEditor() { markdown.value = ''; previewHtml.value = '' }
 
     async function doSubmit() {
-      if (!markdown.value.trim()) { showToast('Report is empty'); return }
+      if (!markdown.value.trim()) { showToast('周报内容不能为空'); return }
       submitting.value = true
       try {
         const data = await api('/api/submit', { method: 'POST', body: JSON.stringify({ content: markdown.value }) })
         if (data.ok) {
           const flywheelMsg = data.flywheel ? ' | 已索引知识库+记录轨迹' : ''
-          showToast('Report submitted! AI is generating summary...' + flywheelMsg)
+          showToast('提交成功！AI 正在生成总结...' + flywheelMsg)
           startPollingSummary(user.value.id)
           loadReportContext(user.value.id)
         }
@@ -124,9 +133,9 @@ status: "on_track"
         if (data.draft) {
           markdown.value = data.draft
           updatePreview()
-          if (data.source === 'no_history') showToast('No Codex history found. Using template.')
-          else if (data.source === 'no_api_key') showToast('No API key. Using template.')
-          else showToast(`Draft generated from ${data.excerpts_found} Codex sessions.`)
+          if (data.source === 'no_history') showToast('未找到 Codex 历史，使用模板。')
+          else if (data.source === 'no_api_key') showToast('未配置 API key，使用模板。')
+          else showToast(`AI 草稿已生成（基于 ${data.excerpts_found} 条 Codex 历史）`)
         }
       } catch (e) { showToast('Draft generation failed: ' + e.message) }
       finally { draftLoading.value = false }
@@ -146,7 +155,7 @@ status: "on_track"
             return
          }
           if (attempts < 30) { pollTimer = setTimeout(poll, 2000) }
-          else { summaryLoading.value = false; showToast('AI summary taking too long. Check back later.') }
+          else { summaryLoading.value = false; showToast('AI 总结生成超时，请稍后查看。') }
         } catch {
           if (attempts < 30) { pollTimer = setTimeout(poll, 2000) }
           else { summaryLoading.value = false }
@@ -401,6 +410,34 @@ status: "on_track"
       } catch(e) { console.error('KB stats:', e) }
     }
 
+
+    // ===== 周报历史 =====
+    async function loadReportHistory() {
+      try {
+        const data = await api(`/api/reports/${user.value.id}`)
+        reportHistory.value = data.reports || []
+      } catch (e) { console.error('report history load failed:', e.message) }
+    }
+
+    function toggleHistory() {
+      if (showHistory.value) { showHistory.value = false; return }
+      loadReportHistory(); showHistory.value = true
+    }
+
+    async function viewHistoryReport(filename) {
+      try {
+        const data = await api(`/api/report/${user.value.id}?file=${encodeURIComponent(filename)}`)
+        historyViewReport.value = data.report
+      } catch (e) { showToast('加载历史周报失败: ' + e.message) }
+    }
+
+    function closeHistoryView() { historyViewReport.value = null }
+
+    function startNewReport() {
+      historyViewReport.value = null
+      showHistory.value = false
+      loadTemplate()
+    }
    onMounted(async () => {
      const u = await getMe()
      if (!u) { window.location.href = '/login'; return }
@@ -410,6 +447,7 @@ status: "on_track"
     loadMyActions()
     loadReportContext(u.id)
     loadMyVc()
+    loadReportHistory()
   })
 
     // Sync URL hash when tab changes (so refresh/bookmark keeps current tab)
@@ -684,9 +722,12 @@ status: "on_track"
       gradSummary, switchToGraduation,
       user, markdown, previewHtml, submitting, summary, summaryLoading,
       roleLabel, updatePreview, loadTemplate, clearEditor, doSubmit, logout,
+    formatHistoryReport,
       formatMessage,
       draftLoading, generateDraft,
-      reportContext, showFeedback, loadReportContext, toggleFeedback,
+      reportHistory, showHistory, historyViewReport,
+    loadReportHistory, toggleHistory, viewHistoryReport, closeHistoryView, startNewReport,
+    reportContext, showFeedback, loadReportContext, toggleFeedback,
       myActions, showActions, actionsLoading, toggleActions,
       activeTab, tasks, kanbanCols, switchToKanban, loadMyTasks,
       myTasksByStatus, isOverdue, updateTaskStatus,

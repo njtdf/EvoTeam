@@ -1,30 +1,32 @@
-import { readFileSync, writeFileSync } from 'fs'
+import { readFileSync, writeFileSync, readdirSync } from 'fs'
 
-// Usage: node scripts/bump-version.mjs 0.7.4
-// Updates: VERSION file, api.js APP_VERSION, all HTML cache bust params
-const version = process.argv[2] || '0.7.4'
-const cacheTag = version.replace(/\./g, '').slice(0, 3) // "0.7.4" -> "074"
+const R = 'D:/OneDrive/7-SideWork/AutoProf/cordis-main'
+const PARENT = 'D:/OneDrive/7-SideWork/AutoProf'
+const OLD = '0.7.19'
+const NEW = '0.7.20'
+const OLD_V = '0719'
+const NEW_V = '0720'
 
-// 1. VERSION file
-writeFileSync('D:/OneDrive/7-SideWork/AutoProf/VERSION', version)
-console.log(`VERSION -> ${version}`)
+// VERSION file
+writeFileSync(`${PARENT}/VERSION`, NEW + '\n')
+console.log('VERSION:', NEW)
 
-// 2. api.js APP_VERSION
-const apiPath = 'public/js/api.js'
-let apiSrc = readFileSync(apiPath, 'utf8')
-apiSrc = apiSrc.replace(/APP_VERSION\s*=\s*'[^']+'/, `APP_VERSION = '${version}'`)
-writeFileSync(apiPath, apiSrc)
-console.log(`api.js APP_VERSION -> ${version}`)
+// api.js APP_VERSION
+let api = readFileSync(`${R}/public/js/api.js`, 'utf-8')
+api = api.replace(`APP_VERSION = '${OLD}'`, `APP_VERSION = '${NEW}'`)
+api = api.replace(`APP_VERSION = "${OLD}"`, `APP_VERSION = "${NEW}"`)
+writeFileSync(`${R}/public/js/api.js`, api, 'utf-8')
+console.log('api.js: APP_VERSION =', NEW)
 
-// 3. HTML cache bust: ?v=0XX -> ?v=0{cacheTag}
-const oldCachePattern = /\?v=\d+/g
-const files = ['public/teacher.html', 'public/student.html', 'public/index.html']
-for (const f of files) {
-  let src = readFileSync(f, 'utf8')
-  const before = src.match(oldCachePattern)
-  src = src.replace(oldCachePattern, `?v=${cacheTag}`)
-  writeFileSync(f, src)
-  console.log(`${f}: ${JSON.stringify(before)} -> ?v=${cacheTag}`)
+// All HTML files: ?v=0719 -> ?v=0720
+const htmlFiles = readdirSync(`${R}/public`).filter(f => f.endsWith('.html'))
+for (const f of htmlFiles) {
+  const p = `${R}/public/${f}`
+  let t = readFileSync(p, 'utf-8')
+  const before = (t.match(new RegExp(OLD_V, 'g')) || []).length
+  t = t.split(OLD_V).join(NEW_V)
+  writeFileSync(p, t, 'utf-8')
+  console.log(`${f}: ${before} replacements`)
 }
 
-console.log(`\nDone. Version ${version}, cache tag ${cacheTag}`)
+console.log('\nVersion bumped to', NEW)

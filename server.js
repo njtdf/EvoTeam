@@ -216,10 +216,37 @@ app.get('/api/students', requireRole('teacher'), (req, res) => {
 // --- API: Report ---
 app.get('/api/report/:id', requireAuth, (req, res) => {
   const config = loadConfig()
-  const filePath = getLatestReport(config, req.params.id)
+  let filePath = null
+  if (req.query.file) {
+    // Load specific report file by filename
+    const reportsDir = join(__dirname, config.reports_dir)
+    const candidate = join(reportsDir, req.params.id, req.query.file)
+    if (existsSync(candidate)) filePath = candidate
+  }
+  if (!filePath) filePath = getLatestReport(config, req.params.id)
   if (!filePath) return res.status(404).json({ error: 'No report found' })
   const report = parseReport(filePath)
   res.json({ report })
+})
+
+// --- API: List all reports for a student ---
+app.get('/api/reports/:id', requireAuth, (req, res) => {
+  const config = loadConfig()
+  const reportsDir = join(__dirname, config.reports_dir)
+  const files = scanReportFiles(reportsDir, req.params.id)
+  const list = files.reverse().map(f => {
+    const report = parseReport(f)
+    const body = (report.raw || '').replace(/^---[\s\S]*?---/, '').trim()
+    return {
+      filename: f.split(/[\\/]/).pop(),
+      period_start: report.meta?.period_start || '',
+      period_end: report.meta?.period_end || '',
+      submitted_at: report.meta?.submitted_at || '',
+      status: report.meta?.status || 'on_track',
+      excerpt: body.slice(0, 150),
+    }
+  })
+  res.json({ reports: list })
 })
 
 // --- API: Submit ---
