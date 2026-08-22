@@ -1161,7 +1161,7 @@
       <div v-if="agents.length===0" class="empty-state" style="padding:24px">暂无 Agent — 点击"创建 Agent"添加</div>
     </div>
 
-    <!-- Agent Chat Panel (moved from dashboard) -->
+        <!-- Agent Chat Panel (moved from dashboard) -->
     <div v-if="activeAgentId" class="agent-chat-panel" style="margin-top:12px">
       <div class="agent-chat-header">
         <span class="agent-chat-title">{{ activeAgent.icon }} {{ activeAgent.name }}</span>
@@ -1191,8 +1191,7 @@
       </div>
     </div>
 
-    <div 
-    <div v-if="agentSubTab==='skills'">
+<div v-if="agentSubTab==='skills'">
       <div class="skills-grid">
         <div class="skill-card" v-for="sk in skillManifest" :key="sk.name" @click="goToSkill(sk.name)">
           <div class="skill-name">{{ sk.name }}</div>
@@ -1796,7 +1795,7 @@
 
 
     <!-- Global AI Chat Bar -->
-    <div class="global-chat-bar" :class="{expanded: globalChatExpanded}" @mouseleave="if(globalChatExpanded) globalChatExpanded=false">
+    <div class="global-chat-bar" :class="{expanded: globalChatExpanded}" @mouseleave="globalChatExpanded = false">
       <div class="global-chat-header" @click="globalChatExpanded = !globalChatExpanded">
         <span>🤖 AI AGENT</span>
         <span class="global-chat-toggle">{{ globalChatExpanded ? '▾' : '▴' }}</span>

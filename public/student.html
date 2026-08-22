@@ -680,7 +680,7 @@
 
 
     <!-- Global AI Chat Bar -->
-    <div class="global-chat-bar" :class="{expanded: globalChatExpanded}" @mouseleave="if(globalChatExpanded) globalChatExpanded=false">
+    <div class="global-chat-bar" :class="{expanded: globalChatExpanded}" @mouseleave="globalChatExpanded = false">
       <div class="global-chat-header" @click="globalChatExpanded = !globalChatExpanded">
         <span>🤖 AI AGENT</span>
         <span class="global-chat-toggle">{{ globalChatExpanded ? '▾' : '▴' }}</span>
