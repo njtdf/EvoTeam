@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EvoTeam - Student</title>
-<link rel="stylesheet" href="/css/app.css?v=0717">
+<link rel="stylesheet" href="/css/app.css?v=0718">
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -156,7 +156,23 @@
     <div v-if="summaryLoading" class="toast blink">AI 正在生成总结...</div>
   </div>
 
-  <!-- 任务 Tab -->
+  <!-- 任务 Tab -->  <!-- 日历 Tab -->
+  <div v-if="activeTab==='calendar'" class="calendar-view">
+    <div class="calendar-header">
+      <button class="btn btn-secondary btn-sm" @click="prevMonth">←</button>
+      <span class="calendar-title">{{ calendarLabel }}</span>
+      <button class="btn btn-secondary btn-sm" @click="nextMonth">→</button>
+    </div>
+    <div class="calendar-grid">
+      <div class="calendar-weekday" v-for="d in calendarWeekdays" :key="d">{{ d }}</div>
+      <div class="calendar-day" v-for="(day, i) in calendarDays" :key="i" :class="{today: day.isToday, other: !day.inMonth}">
+        <div class="calendar-day-num">{{ day.num }}</div>
+        <div class="calendar-event" v-for="e in day.events" :key="e.id" :class="'event-' + e.type" :title="e.title">{{ e.title }}</div>
+      </div>
+    </div>
+  </div>
+
+  
   <div v-if="activeTab==='kanban'" class="kanban-view">
     <div class="kanban-board">
       <div class="kanban-col" v-for="col in kanbanCols" :key="col.status">
@@ -560,7 +576,7 @@
 </main>
   </div>
 </div>
-<script src="/js/api.js?v=0717"></script>
-<script src="/js/student.js?v=0717"></script>
+<script src="/js/api.js?v=0718"></script>
+<script src="/js/student.js?v=0718"></script>
 </body>
 </html>

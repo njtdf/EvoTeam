@@ -1592,7 +1592,8 @@ return {
       kbPage, kbTotalPages, kbShowDocs, kbRebuilding,
       switchToKnowledge, loadKbStats, loadKbDocuments, searchKb, rebuildKbIndex,
       kbNextPage, kbPrevPage,
+      // 课程
+      courseData, courseLoading, courseSubTab, switchToCourse, updateCourseWeek,
     }
   },
-      courseData, courseLoading, courseSubTab, switchToCourse, updateCourseWeek,
 }).mount('#app')
