@@ -210,6 +210,17 @@ status: "on_track"
       return t.deadline && t.deadline < new Date().toISOString().slice(0, 10) && t.status !== 'done'
     }
 
+    const myTaskStats = computed(() => {
+      const total = tasks.value.length
+      const inProgress = tasks.value.filter(t => t.status === 'in_progress').length
+      const done = tasks.value.filter(t => t.status === 'done').length
+      const overdue = tasks.value.filter(t => isOverdue(t)).length
+      const todo = tasks.value.filter(t => t.status === 'todo').length
+      const blocked = tasks.value.filter(t => t.status === 'blocked').length
+      const pct = total > 0 ? Math.round(done / total * 100) : 0
+      return { total, inProgress, done, overdue, todo, blocked, pct }
+    })
+
     async function updateTaskStatus(t, newStatus) {
       try {
         await api(`/api/tasks/${t.task_id}`, { method: 'PUT', body: JSON.stringify({ status: newStatus }) })
@@ -727,6 +738,9 @@ status: "on_track"
     const ideaInput = ref('')
     const ideaStreaming = ref(false)
     const ideaStreamText = ref('')
+    const sharedIdeas = ref([])
+    const ideaShareTitle = ref('')
+    const ideaShareContent = ref('')
 
     async function switchToDailyBrief() {
       activeTab.value = 'daily'
@@ -736,7 +750,10 @@ status: "on_track"
 
     async function switchToIdeas() {
       activeTab.value = 'ideas'
-      try { const r = await api('/api/ideas'); ideaList.value = r.ideas || [] }
+      try {
+        const r = await api('/api/ideas'); ideaList.value = r.ideas || []
+        const sr = await api('/api/ideas?shared=true'); sharedIdeas.value = sr.ideas || []
+      }
       catch(e) { console.error('ideas:', e) }
     }
 
@@ -772,6 +789,35 @@ status: "on_track"
         ideaStreamText.value = 'Error: ' + e.message
       }
       ideaStreaming.value = false
+    }
+
+    async function saveSparkResult(shared) {
+      const title = ideaShareTitle.value || ideaInput.value.slice(0, 40) || 'AI spark result'
+      const content = ideaStreamText.value || ''
+      if (!content.trim()) { showToast('No content to save'); return }
+      try {
+        const r = await api('/api/ideas', { method: 'POST', body: JSON.stringify({ title, content, tags: ['spark'], source: 'spark', shared: !!shared }) })
+        if (r.id) {
+          showToast(shared ? 'Saved and shared!' : 'Saved to your ideas')
+          ideaShareTitle.value = ''
+          await loadIdeas()
+          const sr = await api('/api/ideas?shared=true'); sharedIdeas.value = sr.ideas || []
+        }
+      } catch(e) { showToast('Save failed: ' + e.message) }
+    }
+
+    async function likeIdea(id) {
+      try {
+        const r = await api('/api/ideas/' + id + '/like', { method: 'POST' })
+        const idx = sharedIdeas.value.findIndex(i => i.id === id)
+        if (idx >= 0) sharedIdeas.value[idx] = r
+        const mi = ideaList.value.findIndex(i => i.id === id)
+        if (mi >= 0) ideaList.value[mi] = r
+      } catch(e) { showToast('Like failed: ' + e.message) }
+    }
+
+    function likedByMe(idea) {
+      return idea.liked_by && idea.liked_by.includes(user.value.id)
     }
 
     return {
@@ -815,6 +861,8 @@ status: "on_track"
       courseData, courseLoading, courseSubTab, switchToCourse,
       // Daily Brief + Ideas
       dailyBrief, ideaList, ideaInput, ideaStreaming, ideaStreamText,
+      sharedIdeas, ideaShareTitle, ideaShareContent,
+      myTaskStats, saveSparkResult, likeIdea, likedByMe,
       switchToDailyBrief, switchToIdeas, sparkIdeas,
     }
   },

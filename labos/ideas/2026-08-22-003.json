@@ -1,0 +1,17 @@
+{
+  "id": "2026-08-22-003",
+  "author_id": "s01",
+  "author_name": "宋禧",
+  "author_role": "grad",
+  "title": "V2G mobile storage resilience",
+  "content": "test content",
+  "tags": [
+    "V2G"
+  ],
+  "source": "spark",
+  "shared": true,
+  "status": "raw",
+  "liked_by": [],
+  "created_at": "2026-08-22T03:05:32.397Z",
+  "updated_at": "2026-08-22T03:05:32.415Z"
+}

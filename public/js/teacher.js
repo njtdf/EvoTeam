@@ -296,6 +296,13 @@ createApp({
       return t.deadline && t.deadline < new Date().toISOString().slice(0, 10) && t.status !== 'done'
     }
 
+    function openTaskModal() {
+      const d = new Date()
+      d.setDate(d.getDate() + 7)
+      newTask.value = { title: '', owner_student_id: '', deadline: d.toISOString().slice(0,10), priority: 'medium', project: '', description: '' }
+      showTaskModal.value = true
+    }
+
     async function createTask() {
       if (!newTask.value.title.trim()) { showToast('请输入任务标题'); return }
       try {
@@ -1520,7 +1527,7 @@ e
 
     async function switchToIdeas() {
       activeTab.value = 'ideas'
-      await Promise.all([loadIdeas(), loadGoalTree()])
+      await Promise.all([loadIdeas(), loadGoalTree(), loadSharedIdeas()])
     }
 
     async function loadGoalTree() {
@@ -1572,9 +1579,26 @@ e
       }
       ideaStreaming.value = false
     }
+        const sharedIdeas = ref([])
+    async function loadSharedIdeas() {
+      try { const r = await api('/api/ideas?shared=true'); sharedIdeas.value = r.ideas || [] }
+      catch(e) { console.error('sharedIdeas:', e) }
+    }
+    async function likeIdea(id) {
+      try {
+        const r = await api('/api/ideas/' + id + '/like', { method: 'POST' })
+        const idx = sharedIdeas.value.findIndex(i => i.id === id)
+        if (idx >= 0) sharedIdeas.value[idx] = r
+      } catch(e) { showToast('Like failed: ' + e.message) }
+    }
+    function likedByMe(idea) {
+      return idea.liked_by && idea.liked_by.includes(user.value.id)
+    }
+
     return {
       // Daily Brief + Goal Tree + Ideas
       dailyBrief, goalTree, ideaList, ideaInput, ideaStreaming, ideaStreamText,
+      sharedIdeas, likeIdea, likedByMe, loadSharedIdeas,
       switchToDailyBrief, switchToIdeas, sparkIdeas,
       gradStudentId, gradSummary, switchToGraduation, loadGraduation, updateGradReq, updateGradNotes, seedGraduation,
       user, students, selectedStudentId, report, summary, chatMessages,
@@ -1601,7 +1625,7 @@ e
       tasks, boardStats, news, newsError, showTaskModal, newTask, kanbanCols,
      switchToKanban,
       taskStatusPct, loadTasks, loadBoardStats, loadNews, tasksByStatus,
-     isOverdue, createTask, updateTaskStatus, deleteTask, promoteToKanban,
+     isOverdue, openTaskModal, createTask, updateTaskStatus, deleteTask, promoteToKanban,
      taskDetail, showTaskDetail, taskDetailLoading, openTaskDetail, closeTaskDetail,
      // Phase 4: Promise Ledger
      promiseStats, consistencyData, overduePromises, upcomingPromises, showPromisePanel,

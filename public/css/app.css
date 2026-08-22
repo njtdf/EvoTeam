@@ -1792,3 +1792,24 @@ body {
 .idea-content { font-size: 13px; color: #555; margin: 6px 0; }
 .idea-meta { display: flex; gap: 8px; font-size: 12px; color: #999; flex-wrap: wrap; }
 .idea-tag { padding: 1px 6px; border-radius: 4px; background: #e3edf6; color: #2980b9; }
+
+/* ===== Task Stats Bar ===== */
+.task-stats-bar { display: flex; gap: 8px; align-items: center; padding: 8px 12px; margin-bottom: 12px; background: #f5f7fa; border-radius: 8px; flex-wrap: wrap; }
+.ts-stat { padding: 4px 12px; border-radius: 16px; background: #fff; font-size: 13px; color: #555; border: 1px solid #e0e0e0; }
+.ts-todo { border-color: #b0bec5; color: #546e7a; }
+.ts-progress { border-color: #42a5f5; color: #1565c0; background: #e3f2fd; }
+.ts-done { border-color: #66bb6a; color: #2e7d32; background: #e8f5e9; }
+.ts-overdue { border-color: #ef5350; color: #c62828; background: #ffebee; font-weight: 600; }
+.ts-progress-pct { margin-left: auto; font-size: 18px; font-weight: 700; color: #27ae60; }
+
+/* Task card overdue highlight */
+.task-card-enhanced.task-priority-high.is-overdue { border-left: 3px solid #e74c3c; background: #fff5f5; }
+
+/* ===== Shared Ideas Wall ===== */
+.shared-idea-card { border: 1px solid #e3edf6; background: #f8fbff; }
+.idea-author { font-size: 12px; color: #2980b9; font-weight: 500; }
+.like-btn { border: 1px solid #ddd; background: #fff; border-radius: 16px; padding: 2px 10px; font-size: 12px; cursor: pointer; color: #666; transition: all .15s; }
+.like-btn:hover { border-color: #42a5f5; }
+.like-btn.liked { background: #e3f2fd; border-color: #42a5f5; color: #1565c0; }
+.ideas-save-bar { display: flex; gap: 8px; align-items: center; margin-top: 12px; padding: 8px 0; border-top: 1px solid #eee; }
+.ideas-save-bar .form-input { flex: 1; }

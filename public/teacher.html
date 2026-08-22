@@ -8,7 +8,7 @@
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<link rel="stylesheet" href="/css/app.css?v=0721">
+<link rel="stylesheet" href="/css/app.css?v=0722">
 </head>
 <body>
 <div id="app">
@@ -520,7 +520,7 @@
       </div>
     </div>
     <!-- 新建任务 -->
-    <button class="btn btn-primary" @click="showTaskModal=true" style="margin:12px">+ 新建任务</button>
+    <button class="btn btn-primary" @click="openTaskModal()" style="margin:12px">+ 新建任务</button>
     <div class="modal-overlay" v-if="showTaskModal" @click.self="showTaskModal=false">
       <div class="modal-card">
         <div class="card-title">新建任务</div>
@@ -1840,6 +1840,18 @@
         </div>
       </div>
     </div>
+    <div class="card">
+      <div class="card-title">创意墙 (Shared Ideas)</div>
+      <div v-if="sharedIdeas.length === 0" class="empty-state">还没有分享的创意。</div>
+      <div v-for="idea in sharedIdeas" :key="idea.id" class="idea-card shared-idea-card">
+        <div class="idea-card-header">
+          <span class="idea-title">{{ idea.title }}</span>
+          <span class="idea-author">{{ idea.author_name }}</span>
+          <button class="like-btn" :class="{liked: likedByMe(idea)}" @click="likeIdea(idea.id)">👍 {{ (idea.liked_by || []).length }}</button>
+        </div>
+        <div class="idea-content" v-html="idea.content"></div>
+      </div>
+    </div>
   </div>
 
 </main>
@@ -1848,7 +1860,7 @@
 
 
 
-<script src="/js/api.js?v=0721"></script>
-<script src="/js/teacher.js?v=0721"></script>
+<script src="/js/api.js?v=0722"></script>
+<script src="/js/teacher.js?v=0722"></script>
 </body>
 </html>

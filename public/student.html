@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EvoTeam - Student</title>
-<link rel="stylesheet" href="/css/app.css?v=0721">
+<link rel="stylesheet" href="/css/app.css?v=0722">
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -209,6 +209,14 @@
 
   
   <div v-if="activeTab==='kanban'" class="kanban-view">
+    <div class="task-stats-bar" v-if="myTaskStats">
+      <span class="ts-stat">Total {{ myTaskStats.total }}</span>
+      <span class="ts-stat ts-todo">Todo {{ myTaskStats.todo }}</span>
+      <span class="ts-stat ts-progress">In Progress {{ myTaskStats.inProgress }}</span>
+      <span class="ts-stat ts-done">Done {{ myTaskStats.done }}</span>
+      <span class="ts-stat ts-overdue" v-if="myTaskStats.overdue > 0">Overdue {{ myTaskStats.overdue }}</span>
+      <span class="ts-progress-pct">{{ myTaskStats.pct }}%</span>
+    </div>
     <div class="kanban-board">
       <div class="kanban-col" v-for="col in kanbanCols" :key="col.status">
         <div class="kanban-col-header">
@@ -670,12 +678,33 @@
         </div>
       </div>
     </div>
+    <div class="card">
+      <div class="card-title">创意墙 (Shared Ideas)</div>
+      <div v-if="sharedIdeas.length === 0" class="empty-state">还没有分享的创意。点燃灵感后点“保存并分享”让课题组看到！</div>
+      <div v-for="idea in sharedIdeas" :key="idea.id" class="idea-card shared-idea-card">
+        <div class="idea-card-header">
+          <span class="idea-title">{{ idea.title }}</span>
+          <span class="idea-author">{{ idea.author_name }}</span>
+          <button class="like-btn" :class="{liked: likedByMe(idea)}" @click="likeIdea(idea.id)">👍 {{ (idea.liked_by || []).length }}</button>
+        </div>
+        <div class="idea-content" v-html="idea.content"></div>
+        <div class="idea-meta">
+          <span>{{ idea.created_at ? String(idea.created_at).slice(0,10) : '' }}</span>
+          <span v-for="tag in idea.tags" :key="tag" class="idea-tag">{{ tag }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="ideas-save-bar" v-if="ideaStreamText">
+      <input v-model="ideaShareTitle" class="form-input" placeholder="给这个灵感起个标题">
+      <button class="btn btn-secondary btn-sm" @click="saveSparkResult(false)">保存到创意库</button>
+      <button class="btn btn-primary btn-sm" @click="saveSparkResult(true)">保存并分享</button>
+    </div>
   </div>
 
 </main>
   </div>
 </div>
-<script src="/js/api.js?v=0721"></script>
-<script src="/js/student.js?v=0721"></script>
+<script src="/js/api.js?v=0722"></script>
+<script src="/js/student.js?v=0722"></script>
 </body>
 </html>

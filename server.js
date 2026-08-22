@@ -2073,6 +2073,10 @@ app.get('/api/daily-brief', requireAuth, (req, res) => {
 app.get('/api/ideas', requireAuth, (req, res) => {
   try {
     const user = req.user;
+    if (req.query.shared === 'true') {
+      const shared = listIdeas({ shared: true, limit: 100 });
+      return res.json({ ideas: shared });
+    }
     const authorId = (user.role === 'teacher') ? (req.query.author || null) : user.id;
     const ideas = listIdeas({ author_id: authorId, limit: 50 });
     res.json({ ideas });
@@ -2090,6 +2094,7 @@ app.post('/api/ideas', requireAuth, (req, res) => {
       content: req.body.content || '',
       tags: req.body.tags || [],
       source: req.body.source || 'manual',
+      shared: req.body.shared || false,
     });
     res.json(idea);
   } catch(e) { res.status(500).json({error:e.message}) }
@@ -2112,6 +2117,14 @@ app.put('/api/ideas/:id/status', requireAuth, (req, res) => {
 });
 
 // Spark ideas via SSE
+app.post('/api/ideas/:id/like', requireAuth, (req, res) => {
+  try {
+    const idea = likeIdea(req.params.id, req.user.id);
+    if (!idea) return res.status(404).json({error:'Idea not found'});
+    res.json(idea);
+  } catch(e) { res.status(500).json({error:e.message}) }
+});
+
 app.post('/api/ideas/spark', requireAuth, async (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -2185,7 +2198,7 @@ import { loadSkillManifest, runSkill } from './lib/skills.js'
 import { getScenarios as getInterviewScenarios, startInterview, continueInterview } from './lib/interview.js'
 import { getCourseDetail, listCourses, updateCurrentWeek, getCourseProgress } from './lib/course.js'
 import { buildValueGoalTree, getDependencyMap } from './lib/goal-tree.js'
-import { storeIdea, listIdeas, sparkIdeasStream, buildSparkContext, updateIdeaStatus, deleteIdea } from './lib/ideas.js'
+import { storeIdea, listIdeas, sparkIdeasStream, buildSparkContext, updateIdeaStatus, deleteIdea, likeIdea } from './lib/ideas.js'
 // --- API: AI 工具箱 (Feature 6/16) ---
 app.get('/api/skills', requireAuth, (req, res) => {
   const manifest = loadSkillManifest()
