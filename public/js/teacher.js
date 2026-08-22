@@ -1010,7 +1010,7 @@ async function switchToDashboard() {
     const agentChatInput = ref('')
     const agentStreaming = ref(false)
     const agentStreamText = ref('')
-    const activeAgent = computed(() => agents.value.find(a => a.id === activeAgentId.value) || {})
+    const activeAgent = computed(() => agents.value.find(a => a.id === activeAgentId.value) || cAgents.find(a => a.id === activeAgentId.value) || {})
 
     async function selectAgent(id) {
       if (activeAgentId.value === id) { activeAgentId.value = null; return }
@@ -1597,13 +1597,13 @@ e
 
     // ===== C-Level Agents (global chat bar dropdown) =====
 const cAgents = [
-  { id: 'ceo', icon: '👨‍⚖️', shortName: 'CEO', name: '首席执行官', role: '战略决策', gradient: 'linear-gradient(135deg,#1e3a5f,#2980b9)' },
-  { id: 'cfo', icon: '💰', shortName: 'CFO', name: '首席财务官', role: '经费管理', gradient: 'linear-gradient(135deg,#27ae60,#2ecc71)' },
-  { id: 'cto', icon: '🔧', shortName: 'CTO', name: '首席技术官', role: '技术方向', gradient: 'linear-gradient(135deg,#8e44ad,#9b59b6)' },
-  { id: 'cmo', icon: '📢', shortName: 'CMO', name: '首席营销官', role: '学术影响', gradient: 'linear-gradient(135deg,#e74c3c,#c0392b)' },
-  { id: 'caio', icon: '🤖', shortName: 'CAIO', name: '首席AI官', role: 'AI策略', gradient: 'linear-gradient(135deg,#16a085,#1abc9c)' },
-  { id: 'cbo', icon: '🤝', shortName: 'CBO', name: '首席商务官', role: '产学研', gradient: 'linear-gradient(135deg,#d35400,#e67e22)' },
-  { id: 'cho', icon: '🎓', shortName: 'CHO', name: '首席人才官', role: '学生培养', gradient: 'linear-gradient(135deg,#2c3e50,#34495e)' },
+  { id: 'ceo', icon: '👨‍⚖️', shortName: 'CEO', name: '首席执行官', role: '战略决策', gradient: 'linear-gradient(135deg,#1e3a5f,#2980b9)' , status: 'active', capabilities: ['战略决策', '资源分配', '优先级判断', '全局视角']},
+  { id: 'cfo', icon: '💰', shortName: 'CFO', name: '首席财务官', role: '经费管理', gradient: 'linear-gradient(135deg,#27ae60,#2ecc71)' , status: 'active', capabilities: ['经费管理', '预算分配', '成本控制', '经费效率']},
+  { id: 'cto', icon: '🔧', shortName: 'CTO', name: '首席技术官', role: '技术方向', gradient: 'linear-gradient(135deg,#8e44ad,#9b59b6)' , status: 'active', capabilities: ['技术方向', '研究方法', '工具选型', '技术风险']},
+  { id: 'cmo', icon: '📢', shortName: 'CMO', name: '首席营销官', role: '学术影响', gradient: 'linear-gradient(135deg,#e74c3c,#c0392b)' , status: 'active', capabilities: ['投稿策略', '期刊选择', '学术影响', '成果推广']},
+  { id: 'caio', icon: '🤖', shortName: 'CAIO', name: '首席AI官', role: 'AI策略', gradient: 'linear-gradient(135deg,#16a085,#1abc9c)' , status: 'active', capabilities: ['AI工具选型', '模型策略', '自动化方案', '智能体编排']},
+  { id: 'cbo', icon: '🤝', shortName: 'CBO', name: '首席商务官', role: '产学研', gradient: 'linear-gradient(135deg,#d35400,#e67e22)' , status: 'active', capabilities: ['产学研合作', '专利转化', '商业化', '企业对接']},
+  { id: 'cho', icon: '🎓', shortName: 'CHO', name: '首席人才官', role: '学生培养', gradient: 'linear-gradient(135deg,#2c3e50,#34495e)' , status: 'active', capabilities: ['学生培养', '梯队建设', '能力评估', '毕业跟踪']},
 ]
 const tabAgentMap = {
   dashboard:'ceo', todo:'ceo', notify:'ceo', calendar:'ceo', projects:'cto',
@@ -1619,6 +1619,14 @@ function autoSwitchAgent(tab) {
   const a = tabAgentMap[tab] || 'ceo'
   globalChatAgentId.value = a
 }
+    function selectCLevelAgent(id) {
+      globalChatAgentId.value = id
+      globalChatExpanded.value = true
+      nextTick(() => {
+        const el = document.querySelector('.global-chat-bar')
+        if (el) el.scrollIntoView({ behavior: 'smooth' })
+      })
+    }
 
 // ===== Global Chat Bar =====
     const globalChatExpanded = ref(false)
@@ -1670,7 +1678,7 @@ function autoSwitchAgent(tab) {
      reportContext,
      onStudentChange, sendChat, logout,
      formatMessage, globalChatExpanded, globalChatMessages, globalChatInput, globalChatStreaming, globalChatEl, sendGlobalChat,
-     cAgents, globalChatAgentId, globalChatAgent, autoSwitchAgent,
+     cAgents, globalChatAgentId, globalChatAgent, autoSwitchAgent, selectCLevelAgent,
      switchToCockpit,
      // 总览
       dashboardData, loadingDashboard, briefGenerating,

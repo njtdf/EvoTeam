@@ -8,7 +8,7 @@
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<link rel="stylesheet" href="/css/app.css?v=07.26">
+<link rel="stylesheet" href="/css/app.css?v=07.27">
 </head>
 <body>
 <div id="app">
@@ -1140,7 +1140,29 @@
     <div v-if="agentSubTab==='agents'">
       <button class="btn btn-sm btn-primary" style="margin:8px 0" @click="showAgentModal=true">+ 创建 Agent</button>
       <div class="agent-grid">
-        <div class="agent-card" v-for="a in agents" :key="a.id || a.name">
+        <div class="agent-card" v-for="a in cAgents" :key="a.id || a.name">
+          <div class="agent-card-header">
+            <span class="agent-icon">{{ a.icon }}</span>
+            <span class="agent-name">{{ a.name }}</span>
+            <span class="agent-status" :class="'status-' + a.status">{{ a.status === 'active' ? '✅ 运行中' : '⏳ 计划中' }}</span>
+          </div>
+          <div class="agent-role">{{ a.role }}</div>
+          <div class="agent-desc">{{ a.description }}</div>
+          <div class="agent-caps">
+            <span class="tag" v-for="c in (a.capabilities||[])" :key="c">{{ c }}</span>
+          </div>
+          <div class="agent-card-footer">
+            <button class="btn btn-sm btn-secondary" @click="selectCLevelAgent(a.id)">💬 对话</button>
+            <button class="btn btn-sm btn-secondary" @click="editAgent(a)">✏️ 编辑</button>
+            <button class="btn btn-sm btn-danger" @click="deleteAgent(a.id || a.name)">🗑️ 删除</button>
+          </div>
+        </div>
+      </div>
+      <div v-if="cAgents.length===0" class="empty-state" style="padding:24px">暂无 C-Level Agent — 点击"创建 Agent"添加</div>
+
+      <div class="card-title" style="margin:16px 0 8px;font-size:14px;color:var(--text-muted,#888)">任务级 Agent</div>
+      <div class="agent-grid">
+        <div class="agent-card" v-for="a in agents" :key="a.id || a.name" style="opacity:0.7">
           <div class="agent-card-header">
             <span class="agent-icon">{{ a.icon }}</span>
             <span class="agent-name">{{ a.name }}</span>
@@ -1153,12 +1175,9 @@
           </div>
           <div class="agent-card-footer">
             <button class="btn btn-sm btn-secondary" @click="selectAgent(a.id)">💬 对话</button>
-            <button class="btn btn-sm btn-secondary" @click="editAgent(a)">✏️ 编辑</button>
-            <button class="btn btn-sm btn-danger" @click="deleteAgent(a.id || a.name)">🗑️ 删除</button>
           </div>
         </div>
       </div>
-      <div v-if="agents.length===0" class="empty-state" style="padding:24px">暂无 Agent — 点击"创建 Agent"添加</div>
     </div>
 
         <!-- Agent Chat Panel (moved from dashboard) -->
@@ -1822,7 +1841,7 @@
 
 
 
-<script src="/js/api.js?v=07.26"></script>
-<script src="/js/teacher.js?v=07.26"></script>
+<script src="/js/api.js?v=07.27"></script>
+<script src="/js/teacher.js?v=07.27"></script>
 </body>
 </html>
