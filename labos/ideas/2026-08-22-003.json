@@ -11,7 +11,9 @@
   "source": "spark",
   "shared": true,
   "status": "raw",
-  "liked_by": [],
+  "liked_by": [
+    "t01"
+  ],
   "created_at": "2026-08-22T03:05:32.397Z",
-  "updated_at": "2026-08-22T03:20:31.075Z"
+  "updated_at": "2026-08-22T10:38:45.633Z"
 }

@@ -1565,6 +1565,12 @@ function autoSwitchAgent(tab) {
 
 // ===== Global Chat Bar =====
     const globalChatExpanded = ref(false)
+function onChatMouseLeave() {
+  // Don't collapse if user is typing in the chat input
+  const active = document.activeElement;
+  if (active && active.classList && active.classList.contains('global-chat-input')) return;
+  globalChatExpanded.value = false;
+}
     const globalChatMessages = ref([])
     const globalChatInput = ref('')
     const globalChatStreaming = ref(false)

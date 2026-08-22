@@ -830,6 +830,12 @@ status: "on_track"
 
     // ===== Global Chat Bar =====
     const globalChatExpanded = ref(false)
+function onChatMouseLeave() {
+  // Don't collapse if user is typing in the chat input
+  const active = document.activeElement;
+  if (active && active.classList && active.classList.contains('global-chat-input')) return;
+  globalChatExpanded.value = false;
+}
     const globalChatMessages = ref([])
     const globalChatInput = ref('')
     const globalChatAgentId: 'caio', globalChatStreaming = ref(false)
@@ -866,7 +872,7 @@ status: "on_track"
       user, markdown, previewHtml, submitting, summary, summaryLoading,
       roleLabel, updatePreview, loadTemplate, clearEditor, doSubmit, logout,
     formatHistoryReport,
-      formatMessage, globalChatExpanded, globalChatMessages, globalChatInput, globalChatStreaming, globalChatEl, sendGlobalChat,
+      formatMessage, globalChatExpanded, onChatMouseLeave, globalChatMessages, globalChatInput, globalChatStreaming, globalChatEl, sendGlobalChat,
       draftLoading, generateDraft,
       reportHistory, showHistory, historyViewReport,
     loadReportHistory, toggleHistory, viewHistoryReport, closeHistoryView, startNewReport,
