@@ -8,7 +8,7 @@
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<link rel="stylesheet" href="/css/app.css?v=07.24">
+<link rel="stylesheet" href="/css/app.css?v=07.25">
 </head>
 <body>
 <div id="app">
@@ -147,54 +147,6 @@
             <span class="kn-todo-owner" v-if="t.owner_name">{{ t.owner_name }}</span>
           </div>
           <div v-if="todayTasks.length===0" class="kn-todo-empty">今日无待办 — 喝杯咖啡 ☕</div>
-        </div>
-      </div>
-
-      <!-- 分区2: Agent 网格 -->
-      <div class="kn-section">
-        <div class="kn-section-label">🤖 Agent 团队 — 点击对话</div>
-        <div class="agent-grid">
-          <div v-for="a in agents" :key="a.id"
-               class="agent-avatar-card" :class="{selected: activeAgentId===a.id}"
-               @click="selectAgent(a.id)">
-            <div class="agent-avatar" :class="'avatar-' + a.color"
-                 :style="a.gradient ? {background: a.gradient} : {}">
-              <span class="agent-emoji">{{ a.icon }}</span>
-              <span class="agent-status-dot" :class="'dot-' + a.status"></span>
-            </div>
-            <div class="agent-avatar-name">{{ a.shortName || a.name }}</div>
-            <div class="agent-avatar-role">{{ a.role }}</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Agent 对话面板 -->
-      <div v-if="activeAgentId" class="agent-chat-panel">
-        <div class="agent-chat-header">
-          <span class="agent-chat-title">{{ activeAgent.icon }} {{ activeAgent.name }}</span>
-          <span class="agent-chat-desc">{{ activeAgent.description }}</span>
-          <button class="btn btn-sm btn-secondary" @click="activeAgentId=null">✕ 关闭</button>
-        </div>
-        <div class="chat-messages agent-chat-messages" ref="agentChatEl">
-          <div v-if="agentChatMessages.length === 0" class="text-muted text-center" style="padding:30px">
-            与 {{ activeAgent.name }} 对话 — {{ activeAgent.description }}
-          </div>
-          <div v-for="(msg, i) in agentChatMessages" :key="i"
-               class="chat-bubble" :class="msg.role">
-            <div v-html="formatMessage(msg.content)"></div>
-          </div>
-          <div v-if="agentStreaming" class="chat-bubble ai">
-            <span class="streaming-cursor">{{ agentStreamText }}</span><span class="cursor-blink">▍</span>
-          </div>
-        </div>
-        <div class="chat-input-row">
-          <textarea class="chat-input" v-model="agentChatInput"
-            @keydown.enter.exact.prevent="sendAgentChat"
-            :placeholder="'向 ' + (activeAgent?.shortName || activeAgent?.name) + ' 提问...'">
-          </textarea>
-          <button class="btn btn-primary btn-sm" :disabled="agentStreaming" @click="sendAgentChat">
-            {{ agentStreaming ? '...' : '发送' }}
-          </button>
         </div>
       </div>
 
@@ -1209,6 +1161,37 @@
       <div v-if="agents.length===0" class="empty-state" style="padding:24px">暂无 Agent — 点击"创建 Agent"添加</div>
     </div>
 
+    <!-- Agent Chat Panel (moved from dashboard) -->
+    <div v-if="activeAgentId" class="agent-chat-panel" style="margin-top:12px">
+      <div class="agent-chat-header">
+        <span class="agent-chat-title">{{ activeAgent.icon }} {{ activeAgent.name }}</span>
+        <span class="agent-chat-desc">{{ activeAgent.description }}</span>
+        <button class="btn btn-sm btn-secondary" @click="activeAgentId=null">✕ 关闭</button>
+      </div>
+      <div class="chat-messages agent-chat-messages" ref="agentChatEl" style="max-height:300px;overflow-y:auto">
+        <div v-if="agentChatMessages.length === 0" class="text-muted text-center" style="padding:30px">
+          与 {{ activeAgent.name }} 对话 — {{ activeAgent.description }}
+        </div>
+        <div v-for="(msg, i) in agentChatMessages" :key="i"
+             class="chat-bubble" :class="msg.role">
+          <div v-html="formatMessage(msg.content)"></div>
+        </div>
+        <div v-if="agentStreaming" class="chat-bubble ai">
+          <span class="streaming-cursor">{{ agentStreamText }}</span><span class="cursor-blink">▍</span>
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <textarea class="chat-input" v-model="agentChatInput"
+          @keydown.enter.exact.prevent="sendAgentChat"
+          :placeholder="'向 ' + (activeAgent?.shortName || activeAgent?.name) + ' 提问...'">
+        </textarea>
+        <button class="btn btn-primary btn-sm" :disabled="agentStreaming" @click="sendAgentChat">
+          {{ agentStreaming ? '...' : '发送' }}
+        </button>
+      </div>
+    </div>
+
+    <div 
     <div v-if="agentSubTab==='skills'">
       <div class="skills-grid">
         <div class="skill-card" v-for="sk in skillManifest" :key="sk.name" @click="goToSkill(sk.name)">
@@ -1813,9 +1796,9 @@
 
 
     <!-- Global AI Chat Bar -->
-    <div class="global-chat-bar" :class="{expanded: globalChatExpanded}">
+    <div class="global-chat-bar" :class="{expanded: globalChatExpanded}" @mouseleave="if(globalChatExpanded) globalChatExpanded=false">
       <div class="global-chat-header" @click="globalChatExpanded = !globalChatExpanded">
-        <span>🤖 AI 助手</span>
+        <span>🤖 AI AGENT</span>
         <span class="global-chat-toggle">{{ globalChatExpanded ? '▾' : '▴' }}</span>
       </div>
       <div class="global-chat-body" v-show="globalChatExpanded">
@@ -1836,7 +1819,7 @@
 
 
 
-<script src="/js/api.js?v=07.24"></script>
-<script src="/js/teacher.js?v=07.24"></script>
+<script src="/js/api.js?v=07.25"></script>
+<script src="/js/teacher.js?v=07.25"></script>
 </body>
 </html>

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EvoTeam - Student</title>
-<link rel="stylesheet" href="/css/app.css?v=07.24">
+<link rel="stylesheet" href="/css/app.css?v=07.25">
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -25,7 +25,7 @@
         <a class="sidebar-nav-item" :class="{active:activeTab==='profile'}" @click="switchToProfile"><span class="nav-icon">📊</span> 我的档案</a>
         <a class="sidebar-nav-item" :class="{active:activeTab==='course'}" @click="switchToCourse"><span class="nav-icon">📖</span> 课程</a>
         <div class="sidebar-nav-section">Agent</div>
-        <a class="sidebar-nav-item" :class="{active:activeTab==='assistant'}" @click="switchToAssistant"><span class="nav-icon">🤖</span> AI 助手</a>
+        <a class="sidebar-nav-item" :class="{active:activeTab==='assistant'}" @click="switchToAssistant"><span class="nav-icon">🤖</span> AI AGENT</a>
         <a class="sidebar-nav-item" :class="{active:activeTab==='ideas'}" @click="switchToIdeas"><span class="nav-icon">⚡</span> 灵感工厂</a>
         <div class="sidebar-nav-section">科研工具</div>
                 <a class="sidebar-nav-item" :class="{active:activeTab==='skills'}" @click="switchToSkills"><span class="nav-icon">🧰</span> 工具箱</a>
@@ -405,7 +405,7 @@
   <div v-if="showVcModal" class="vc-modal-overlay" @click.self="showVcModal=false">
     <div class="vc-modal">
       <div class="vc-modal-title">欢迎！请填写你的个人价值链</div>
-      <p class="vc-modal-desc">这将帮助 AI 助手更好地理解你的目标，为你提供个性化的科研指导。</p>
+      <p class="vc-modal-desc">这将帮助 AI AGENT更好地理解你的目标，为你提供个性化的科研指导。</p>
       <div class="form-row">
         <label>你的主要目标（毕业后打算）:</label>
         <select v-model="vcForm.primary" class="form-input">
@@ -680,9 +680,9 @@
 
 
     <!-- Global AI Chat Bar -->
-    <div class="global-chat-bar" :class="{expanded: globalChatExpanded}">
+    <div class="global-chat-bar" :class="{expanded: globalChatExpanded}" @mouseleave="if(globalChatExpanded) globalChatExpanded=false">
       <div class="global-chat-header" @click="globalChatExpanded = !globalChatExpanded">
-        <span>🤖 AI 助手</span>
+        <span>🤖 AI AGENT</span>
         <span class="global-chat-toggle">{{ globalChatExpanded ? '▾' : '▴' }}</span>
       </div>
       <div class="global-chat-body" v-show="globalChatExpanded">
@@ -700,7 +700,7 @@
     </main>
   </div>
 </div>
-<script src="/js/api.js?v=07.24"></script>
-<script src="/js/student.js?v=07.24"></script>
+<script src="/js/api.js?v=07.25"></script>
+<script src="/js/student.js?v=07.25"></script>
 </body>
 </html>
