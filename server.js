@@ -2001,6 +2001,150 @@ app.get('/api/course/:name/progress', (req, res) => {
   } catch(e) { res.status(500).json({error:e.message}) }
 })
 
+
+// ===== Value Goal Tree (价值目标树) =====
+app.get('/api/goal-tree', requireAuth, (req, res) => {
+  try {
+    const tree = buildValueGoalTree();
+    res.json(tree);
+  } catch(e) { res.status(500).json({error:e.message}) }
+});
+
+app.get('/api/goal-tree/dependencies', requireAuth, (req, res) => {
+  try {
+    const deps = getDependencyMap();
+    res.json(deps);
+  } catch(e) { res.status(500).json({error:e.message}) }
+});
+
+// ===== Daily Brief (每日信息) =====
+app.get('/api/daily-brief', requireAuth, (req, res) => {
+  try {
+    const today = new Date().toISOString().slice(0,10);
+    const user = req.user;
+    
+    // Tasks
+    const taskData = loadTasks();
+    let myTasks = taskData.tasks || [];
+    if (user.role === 'student' || user.role === 'grad' || user.role === 'undergrad') {
+      myTasks = myTasks.filter(t => t.owner_student_id === user.id);
+    }
+    const overdueTasks = myTasks.filter(t => t.status !== 'done' && t.deadline && t.deadline < today);
+    const dueToday = myTasks.filter(t => t.status !== 'done' && t.deadline === today);
+    const inProgress = myTasks.filter(t => t.status === 'in_progress');
+    
+    // Board stats
+    const stats = getBoardStats();
+    
+    // News
+    let news = [];
+    try { news = getLatestNews(5) || []; } catch {}
+    
+    // External events
+    let events = [];
+    try { events = getRecentEvents(5) || []; } catch {}
+    
+    // Calendar events
+    let calEvents = [];
+    try {
+      const cal = loadCalendarEvents();
+      calEvents = (cal.events || []).filter(e => e.date === today || e.date >= today).slice(0, 5);
+    } catch {}
+    
+    // Goal tree stats
+    const tree = buildValueGoalTree();
+    
+    res.json({
+      date: today,
+      overdue_tasks: overdueTasks,
+      due_today: dueToday,
+      in_progress: inProgress,
+      board_stats: stats,
+      news,
+      events,
+      calendar: calEvents,
+      goal_tree_stats: tree.stats,
+      user_role: user.role,
+    });
+  } catch(e) { res.status(500).json({error:e.message}) }
+});
+
+// ===== Ideas / Inspiration Factory (灵感工厂) =====
+app.get('/api/ideas', requireAuth, (req, res) => {
+  try {
+    const user = req.user;
+    const authorId = (user.role === 'teacher') ? (req.query.author || null) : user.id;
+    const ideas = listIdeas({ author_id: authorId, limit: 50 });
+    res.json({ ideas });
+  } catch(e) { res.status(500).json({error:e.message}) }
+});
+
+app.post('/api/ideas', requireAuth, (req, res) => {
+  try {
+    const user = req.user;
+    const idea = storeIdea({
+      author_id: user.id,
+      author_name: user.name || user.id,
+      author_role: user.role,
+      title: req.body.title || '',
+      content: req.body.content || '',
+      tags: req.body.tags || [],
+      source: req.body.source || 'manual',
+    });
+    res.json(idea);
+  } catch(e) { res.status(500).json({error:e.message}) }
+});
+
+app.delete('/api/ideas/:id', requireAuth, requireRole('teacher'), (req, res) => {
+  try {
+    const ok = deleteIdea(req.params.id);
+    if (!ok) return res.status(404).json({error:'Idea not found'});
+    res.json({ok:true});
+  } catch(e) { res.status(500).json({error:e.message}) }
+});
+
+app.put('/api/ideas/:id/status', requireAuth, (req, res) => {
+  try {
+    const idea = updateIdeaStatus(req.params.id, req.body.status);
+    if (!idea) return res.status(404).json({error:'Idea not found'});
+    res.json(idea);
+  } catch(e) { res.status(500).json({error:e.message}) }
+});
+
+// Spark ideas via SSE
+app.post('/api/ideas/spark', requireAuth, async (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  
+  // Build daily brief for context
+  let dailyBrief = null;
+  try {
+    const today = new Date().toISOString().slice(0,10);
+    const taskData = loadTasks();
+    const stats = getBoardStats();
+    let news = [];
+    try { news = getLatestNews(5) || []; } catch {}
+    let events = [];
+    try { events = getRecentEvents(5) || []; } catch {}
+    const overdueTasks = (taskData.tasks || []).filter(t => t.status !== 'done' && t.deadline && t.deadline < today);
+    dailyBrief = { overdue_tasks: overdueTasks, news, events, board_stats: stats };
+  } catch {}
+  
+  const controller = new AbortController();
+  req.on('close', () => controller.abort());
+  
+  try {
+    await sparkIdeasStream(req.body.idea || '', dailyBrief, (chunk) => {
+      res.write('data: ' + JSON.stringify({chunk}) + '\n\n');
+    }, controller.signal);
+    res.write('data: ' + JSON.stringify({done:true}) + '\n\n');
+  } catch(e) {
+    res.write('data: ' + JSON.stringify({error: e.message}) + '\n\n');
+  }
+  res.end();
+});
+
 const server = app.listen(PORT, () => {
   console.log(`\n  AutoProf Lab Brief v2 ready:`)
   console.log(`  Login:    http://localhost:${PORT}/login`)
@@ -2040,6 +2184,8 @@ wss.on('connection', (ws) => {
 import { loadSkillManifest, runSkill } from './lib/skills.js'
 import { getScenarios as getInterviewScenarios, startInterview, continueInterview } from './lib/interview.js'
 import { getCourseDetail, listCourses, updateCurrentWeek, getCourseProgress } from './lib/course.js'
+import { buildValueGoalTree, getDependencyMap } from './lib/goal-tree.js'
+import { storeIdea, listIdeas, sparkIdeasStream, buildSparkContext, updateIdeaStatus, deleteIdea } from './lib/ideas.js'
 // --- API: AI 工具箱 (Feature 6/16) ---
 app.get('/api/skills', requireAuth, (req, res) => {
   const manifest = loadSkillManifest()

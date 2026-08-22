@@ -1,31 +1,26 @@
 import { readFileSync } from 'fs'
 
-const js = readFileSync('public/js/teacher.js', 'utf8')
-const html = readFileSync('public/teacher.html', 'utf8')
+const R = 'D:/OneDrive/7-SideWork/AutoProf/cordis-main'
+const html = readFileSync(`${R}/public/student.html`, 'utf-8')
+const js = readFileSync(`${R}/public/js/student.js`, 'utf-8')
 
-const retMatch = js.match(/return\s*\{([\s\S]*?)\n\s*\}/)
-const exposed = new Set()
-if (retMatch) {
-  const props = retMatch[1].match(/(\w+)/g)
-  props.forEach(p => exposed.add(p))
+// Extract all @click="xxx" and v-model="xxx" references from student.html
+const clickRefs = [...html.matchAll(/@click="(\w+)/g)].map(m => m[1])
+const uniqueClick = [...new Set(clickRefs)]
+
+console.log('=== @click refs in student.html ===')
+for (const ref of uniqueClick) {
+  // Check if it's in the return block (roughly: appears as `ref,` or `ref}` near other exports)
+  const inReturn = js.includes(`${ref},`) || js.includes(`${ref}}`) || js.includes(`${ref} `)
+  console.log(`${inReturn ? 'OK' : 'MISSING'}: ${ref}`)
 }
 
-const dashMatch = html.match(/Welcome[\s\S]*?Cockpit/)
-if (dashMatch) {
-  const dash = dashMatch[0]
-  const used = new Set()
-  for (const m of dash.matchAll(/\{\{\s*(\w+)/g)) used.add(m[1])
-  for (const m of dash.matchAll(/v-if="!?(\w+)/g)) used.add(m[1])
-  for (const m of dash.matchAll(/v-for="\w+ in (\w+)/g)) used.add(m[1])
-  for (const m of dash.matchAll(/v-model="(\w+)/g)) used.add(m[1])
-  for (const m of dash.matchAll(/@click="(\w+)/g)) used.add(m[1])
-
-  const known = new Set(['true','false','null','undefined','Math','status','priority','owner_name','title','name','icon','role','shortName','description','color','gradient','time','text','path','task_id','content'])
-  const missing = [...used].filter(u => !exposed.has(u) && !known.has(u))
-  if (missing.length === 0) {
-    console.log('OK: All dashboard refs exposed')
-  } else {
-    console.log('MISSING:', missing.join(', '))
-  }
-  console.log('Used:', [...used].sort().join(', '))
+// Extract {{ xxx }} references
+const interpRefs = [...html.matchAll(/\{\{\s*(\w+)/g)].map(m => m[1])
+const uniqueInterp = [...new Set(interpRefs)]
+console.log('\n=== {{ }} refs in student.html ===')
+for (const ref of uniqueInterp) {
+  if (ref === 'true' || ref === 'false') continue
+  const inReturn = js.includes(`${ref},`) || js.includes(`${ref}}`) || js.includes(`${ref} `)
+  console.log(`${inReturn ? 'OK' : 'MISSING'}: ${ref}`)
 }

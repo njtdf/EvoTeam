@@ -8,7 +8,7 @@
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<link rel="stylesheet" href="/css/app.css?v=0720">
+<link rel="stylesheet" href="/css/app.css?v=0721">
 </head>
 <body>
 <div id="app">
@@ -20,6 +20,7 @@
       <nav class="sidebar-nav">
         <div class="sidebar-nav-section">核心</div>
         <a class="sidebar-nav-item" :class="{active:activeTab==='dashboard'}" @click="switchToDashboard"><span class="nav-icon">🧭</span> 总览</a>
+        <a class="sidebar-nav-item" :class="{active:activeTab==='daily'}" @click="switchToDailyBrief"><span class="nav-icon">📰</span> 每日信息</a>
         <a class="sidebar-nav-item" :class="{active:activeTab==='todo'}" @click="switchToTodo"><span class="nav-icon">✅</span> ToDo<span v-if="todoCount" class="nav-badge">{{ todoCount }}</span></a>
         <a class="sidebar-nav-item" :class="{active:activeTab==='notify'}" @click="switchToNotify"><span class="nav-icon">🔔</span> 通知<span v-if="unreadCount" class="nav-badge">{{ unreadCount }}</span></a>
         <a class="sidebar-nav-item" :class="{active:activeTab==='calendar'}" @click="switchToCalendar"><span class="nav-icon">📅</span> 日历</a>
@@ -35,6 +36,7 @@
       <a class="sidebar-nav-item" :class="{active:activeTab==='profile'}" @click="switchToProfile"><span class="nav-icon">📊</span> 学生档案</a>
         <div class="sidebar-nav-section">Agent</div>
         <a class="sidebar-nav-item" :class="{active:activeTab==='agents'}" @click="switchToAgents"><span class="nav-icon">🤖</span> 实时状态</a>
+        <a class="sidebar-nav-item" :class="{active:activeTab==='ideas'}" @click="switchToIdeas"><span class="nav-icon">💡</span> 灵感工厂</a>
         <div class="sidebar-nav-section">科研工具</div>
         <a class="sidebar-nav-item" :class="{active:activeTab==='skills'}" @click="switchToSkills"><span class="nav-icon">🧰</span> 工具箱</a>
         <a class="sidebar-nav-item" :class="{active:activeTab==='submissions'}" @click="switchToSubmissions"><span class="nav-icon">📄</span> 投稿</a>
@@ -908,6 +910,48 @@
 </div>
 <!-- 价值链 Tab (Wave 5) -->
 <div v-if="activeTab==='valuecycle'" class="valuecycle-view">
+  <!-- Value Goal Tree -->
+  <div class="card" v-if="goalTree">
+    <div class="card-title">价值目标树 — 课题组组织地图</div>
+    <div class="goal-tree-stats">
+      <span class="gt-stat">研究方向: {{ goalTree.stats.total_directions }}</span>
+      <span class="gt-stat">学生: {{ goalTree.stats.total_students }}</span>
+      <span class="gt-stat">任务: {{ goalTree.stats.total_tasks }}</span>
+      <span class="gt-stat">完成: {{ goalTree.stats.total_done }}</span>
+      <span class="gt-stat gt-overdue" v-if="goalTree.stats.total_overdue">逾期: {{ goalTree.stats.total_overdue }}</span>
+    </div>
+    <div class="goal-tree">
+      <div v-for="(dir, di) in goalTree.directions" :key="dir.name" class="gt-branch" :class="{expanded: dir.expanded}">
+        <div class="gt-branch-header" @click="dir.expanded = !dir.expanded">
+          <span class="gt-toggle">{{ dir.expanded ? "▼" : "▶" }}</span>
+          <span class="gt-branch-name">{{ dir.name }}</span>
+          <span class="gt-branch-meta">{{ dir.students.length }}人 / {{ dir.task_count }}任务 / {{ dir.done_count }}完成</span>
+          <span class="gt-progress" v-if="dir.task_count > 0">{{ Math.round(dir.done_count / dir.task_count * 100) }}%</span>
+        </div>
+        <div v-if="dir.expanded" class="gt-branch-body">
+          <div v-for="st in dir.students" :key="st.id" class="gt-student">
+            <div class="gt-student-header">
+              <span class="gt-student-name">{{ st.name }} ({{ st.id }})</span>
+              <span class="gt-student-project">{{ st.project }}</span>
+              <span class="gt-stage-tag">{{ st.research_stage }}</span>
+              <span class="gt-task-count">{{ st.task_count }}任务 / {{ st.done_count }}完成</span>
+              <span class="gt-overdue-badge" v-if="st.overdue_count > 0">逾期{{ st.overdue_count }}</span>
+            </div>
+            <div class="gt-progress-bar" v-if="st.task_count > 0">
+              <div class="gt-progress-fill" :style="{width: st.progress_pct + '%'}"></div>
+              <span class="gt-progress-text">{{ st.progress_pct }}%</span>
+            </div>
+            <div class="gt-deps" v-if="st.dependencies.length > 0">
+              <span class="gt-dep-label">依赖:</span>
+              <span v-for="dep in st.dependencies" :key="dep.student_id" class="gt-dep-chip">{{ dep.student_name }}</span>
+            </div>
+          </div>
+          <div v-if="dir.students.length === 0" class="gt-empty">该方向暂无学生</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="card" v-if="groupVc">
     <div class="card-title">课题组价值链</div>
     <div class="vc-group-section">
@@ -1722,13 +1766,89 @@
     <div v-else class="empty-state">未找到课程数据</div>
   </div>
 
+  <!-- Daily Brief Tab -->
+  <div v-if="activeTab==='daily'" class="daily-brief-view" style="padding:16px">
+    <div class="card" v-if="dailyBrief">
+      <div class="card-title">每日信息 — {{ dailyBrief.date }}</div>
+      <div class="db-stats-row">
+        <span class="db-stat-pill" :class="{danger: dailyBrief.overdue_tasks.length > 0}">逾期 {{ dailyBrief.overdue_tasks.length }}</span>
+        <span class="db-stat-pill">今日到期 {{ dailyBrief.due_today.length }}</span>
+        <span class="db-stat-pill">进行中 {{ dailyBrief.in_progress.length }}</span>
+        <span class="db-stat-pill" v-if="dailyBrief.board_stats">总任务 {{ dailyBrief.board_stats.total }}</span>
+      </div>
+    </div>
+    <div class="card" v-if="dailyBrief && dailyBrief.overdue_tasks.length > 0">
+      <div class="card-title">⏰ 逾期任务</div>
+      <div v-for="t in dailyBrief.overdue_tasks" :key="t.task_id" class="db-task-item">
+        <span class="db-task-title">{{ t.title }}</span>
+        <span class="db-task-deadline">{{ t.deadline }}</span>
+        <span class="db-task-owner">{{ t.owner_name }}</span>
+      </div>
+    </div>
+    <div class="card" v-if="dailyBrief && dailyBrief.in_progress.length > 0">
+      <div class="card-title">⏳ 进行中</div>
+      <div v-for="t in dailyBrief.in_progress" :key="t.task_id" class="db-task-item">
+        <span class="db-task-title">{{ t.title }}</span>
+        <span class="db-task-owner">{{ t.owner_name }}</span>
+      </div>
+    </div>
+    <div class="card" v-if="dailyBrief && dailyBrief.events.length > 0">
+      <div class="card-title">📌 外部动态</div>
+      <div v-for="e in dailyBrief.events" :key="e.id || e.title" class="db-event-item">
+        <span class="db-event-type">{{ e.type || "news" }}</span>
+        <span class="db-event-title">{{ e.title || e.summary }}</span>
+      </div>
+    </div>
+    <div class="card" v-if="dailyBrief && dailyBrief.goal_tree_stats">
+      <div class="card-title">价值目标树概览</div>
+      <div class="db-tree-summary">
+        <span>方向: {{ dailyBrief.goal_tree_stats.total_directions }}</span>
+        <span>学生: {{ dailyBrief.goal_tree_stats.total_students }}</span>
+        <span>任务: {{ dailyBrief.goal_tree_stats.total_tasks }}</span>
+        <span>完成: {{ dailyBrief.goal_tree_stats.total_done }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ideas / Inspiration Factory Tab -->
+  <div v-if="activeTab==='ideas'" class="ideas-view" style="padding:16px">
+    <div class="card">
+      <div class="card-title">灵感工厂</div>
+      <p class="ideas-intro">AGENT 读取每日信息 + 价值目标树，结合你的输入，生成创新研究想法</p>
+      <div class="ideas-input-area">
+        <textarea v-model="ideaInput" class="ideas-textarea" placeholder="输入你的灵感或问题（如：电动汽车充电网络韧性如何与移动储能结合？）"></textarea>
+        <button class="btn btn-primary" @click="sparkIdeas" :disabled="ideaStreaming">⚡ 点燃灵感</button>
+      </div>
+      <div v-if="ideaStreaming || ideaStreamText" class="ideas-output">
+        <div class="card-title">AI 灵感输出</div>
+        <div class="ideas-stream" v-html="ideaStreamText"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">创意库 ({{ ideaList.length }})</div>
+      <div v-if="ideaList.length === 0" class="empty-state">还没有创意，点燃灵感试试。</div>
+      <div v-for="idea in ideaList" :key="idea.id" class="idea-card">
+        <div class="idea-card-header">
+          <span class="idea-title">{{ idea.title }}</span>
+          <span class="idea-status" :class="'status-'+idea.status">{{ idea.status }}</span>
+        </div>
+        <div class="idea-content">{{ idea.content }}</div>
+        <div class="idea-meta">
+          <span>{{ idea.author_name }}</span>
+          <span>{{ idea.created_at?.slice(0,10) }}</span>
+          <span v-for="tag in idea.tags" :key="tag" class="idea-tag">{{ tag }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </main>
    </div>
  </div>
 
 
 
-<script src="/js/api.js?v=0720"></script>
-<script src="/js/teacher.js?v=0720"></script>
+<script src="/js/api.js?v=0721"></script>
+<script src="/js/teacher.js?v=0721"></script>
 </body>
 </html>

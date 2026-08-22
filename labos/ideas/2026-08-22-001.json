@@ -1,0 +1,14 @@
+{
+  "id": "2026-08-22-001",
+  "author_id": "t01",
+  "author_name": "test",
+  "author_role": "student",
+  "title": "test idea",
+  "content": "test content",
+  "tags": [
+    "test"
+  ],
+  "source": "manual",
+  "status": "raw",
+  "created_at": "2026-08-22T02:26:27.646Z"
+}

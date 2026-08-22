@@ -459,7 +459,7 @@ status: "on_track"
 
     // Restore tab from URL hash on initial load
     const hash = window.location.hash.slice(1)
-    const validTabs = ['report', 'kanban', 'calendar', 'assistant', 'kb', 'skills', 'interview']
+    const validTabs = ['report', 'daily', 'kanban', 'calendar', 'assistant', 'ideas', 'kb', 'skills', 'interview']
     if (hash && validTabs.includes(hash)) {
       activeTab.value = hash
       if (hash === 'kanban') switchToKanban()
@@ -468,6 +468,8 @@ status: "on_track"
       else if (hash === 'kb') switchToKb()
       else if (hash === 'skills') switchToSkills()
       else if (hash === 'interview') switchToInterview()
+      else if (hash === 'daily') switchToDailyBrief()
+      else if (hash === 'ideas') switchToIdeas()
     }
 
     // --- 价值链首次填写 (Wave 5) ---
@@ -718,6 +720,60 @@ status: "on_track"
     }
 
 
+    
+    // ===== Daily Brief + Ideas (Wave 7) =====
+    const dailyBrief = ref(null)
+    const ideaList = ref([])
+    const ideaInput = ref('')
+    const ideaStreaming = ref(false)
+    const ideaStreamText = ref('')
+
+    async function switchToDailyBrief() {
+      activeTab.value = 'daily'
+      try { dailyBrief.value = await api('/api/daily-brief') }
+      catch(e) { console.error('dailyBrief:', e) }
+    }
+
+    async function switchToIdeas() {
+      activeTab.value = 'ideas'
+      try { const r = await api('/api/ideas'); ideaList.value = r.ideas || [] }
+      catch(e) { console.error('ideas:', e) }
+    }
+
+    async function sparkIdeas() {
+      if (ideaStreaming.value) return
+      ideaStreaming.value = true
+      ideaStreamText.value = ''
+      try {
+        const resp = await fetch('/api/ideas/spark', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idea: ideaInput.value })
+        })
+        const reader = resp.body.getReader()
+        const decoder = new TextDecoder()
+        let buf = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += decoder.decode(value, { stream: true })
+          const lines = buf.split('\n')
+          buf = lines.pop()
+          for (const line of lines) {
+            if (!line.startsWith('data:')) continue
+            try {
+              const data = JSON.parse(line.slice(5).trim())
+              if (data.chunk) ideaStreamText.value += data.chunk
+              if (data.error) ideaStreamText.value += "\nError: " + data.error
+            } catch {}
+          }
+        }
+      } catch(e) {
+        ideaStreamText.value = 'Error: ' + e.message
+      }
+      ideaStreaming.value = false
+    }
+
     return {
       gradSummary, switchToGraduation,
       user, markdown, previewHtml, submitting, summary, summaryLoading,
@@ -757,6 +813,9 @@ status: "on_track"
       // 我的档案
       myProfile, profileLoading, switchToProfile, capabilityLabels,
       courseData, courseLoading, courseSubTab, switchToCourse,
+      // Daily Brief + Ideas
+      dailyBrief, ideaList, ideaInput, ideaStreaming, ideaStreamText,
+      switchToDailyBrief, switchToIdeas, sparkIdeas,
     }
   },
 }).mount('#app')

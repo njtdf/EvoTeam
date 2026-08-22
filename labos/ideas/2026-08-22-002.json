@@ -1,0 +1,15 @@
+{
+  "id": "2026-08-22-002",
+  "author_id": "t01",
+  "author_name": "汤老师",
+  "author_role": "teacher",
+  "title": "API test 2",
+  "content": "from api test",
+  "tags": [
+    "test",
+    "api"
+  ],
+  "source": "manual",
+  "status": "raw",
+  "created_at": "2026-08-22T02:30:42.782Z"
+}

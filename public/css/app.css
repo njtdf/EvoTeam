@@ -1730,3 +1730,65 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* ===== Value Goal Tree ===== */
+.gt-branch { border: 1px solid var(--border, #e0e0e0); border-radius: 8px; margin: 6px 0; overflow: hidden; }
+.gt-branch-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; background: #f5f7fa; transition: background .15s; }
+.gt-branch-header:hover { background: #eef1f5; }
+.gt-toggle { width: 16px; text-align: center; font-size: 12px; color: #888; }
+.gt-branch-name { font-weight: 600; color: var(--text, #222); }
+.gt-branch-meta { font-size: 12px; color: #888; margin-left: auto; }
+.gt-progress { font-size: 12px; color: #27ae60; font-weight: 600; }
+.gt-branch-body { padding: 4px 12px 8px 28px; }
+.gt-student { padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+.gt-student:last-child { border-bottom: none; }
+.gt-student-header { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.gt-student-name { font-weight: 600; font-size: 14px; }
+.gt-student-project { font-size: 12px; color: #666; }
+.gt-stage-tag { font-size: 11px; padding: 1px 6px; border-radius: 4px; background: #e8edf2; color: #555; }
+.gt-task-count { font-size: 12px; color: #888; margin-left: auto; }
+.gt-overdue-badge { font-size: 11px; padding: 1px 6px; border-radius: 4px; background: #fde8e8; color: #e74c3c; }
+.gt-progress-bar { height: 18px; background: #eee; border-radius: 9px; overflow: hidden; margin: 4px 0; position: relative; }
+.gt-progress-fill { height: 100%; background: linear-gradient(90deg, #27ae60, #2ecc71); border-radius: 9px; transition: width .3s; }
+.gt-progress-text { position: absolute; right: 8px; top: 0; font-size: 11px; line-height: 18px; color: #333; font-weight: 600; }
+.gt-deps { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.gt-dep-label { font-size: 11px; color: #999; }
+.gt-dep-chip { font-size: 11px; padding: 1px 6px; border-radius: 4px; background: #e3edf6; color: #2980b9; }
+.gt-empty { padding: 8px 0; font-size: 13px; color: #999; }
+.gt-stat { font-size: 13px; color: #555; }
+.gt-overdue { color: #e74c3c; font-weight: 600; }
+.goal-tree-stats { display: flex; gap: 12px; margin-bottom: 8px; }
+
+/* ===== Daily Brief ===== */
+.daily-brief-view { max-width: 900px; }
+.db-stats-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.db-stat-pill { padding: 4px 12px; border-radius: 16px; background: #eef1f5; font-size: 13px; color: #555; }
+.db-stat-pill.danger { background: #fde8e8; color: #e74c3c; }
+.db-task-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0f0f0; }
+.db-task-item:last-child { border-bottom: none; }
+.db-task-title { font-weight: 500; }
+.db-task-deadline { font-size: 12px; color: #e74c3c; margin-left: auto; }
+.db-task-owner { font-size: 12px; color: #888; }
+.db-event-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0f0f0; }
+.db-event-item:last-child { border-bottom: none; }
+.db-event-type { font-size: 11px; padding: 1px 6px; border-radius: 4px; background: #e8edf2; color: #555; }
+.db-event-title { font-size: 13px; }
+.db-tree-summary { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 8px; }
+.db-tree-summary span { font-size: 13px; color: #555; }
+
+/* ===== Ideas / Inspiration Factory ===== */
+.ideas-view { max-width: 900px; }
+.ideas-intro { font-size: 13px; color: #777; margin: 8px 0; }
+.ideas-input-area { display: flex; gap: 8px; margin-bottom: 12px; }
+.ideas-textarea { flex: 1; min-height: 80px; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; resize: vertical; }
+.ideas-output { margin: 12px 0; }
+.ideas-stream { padding: 12px; background: #f9f9f9; border-radius: 6px; font-size: 14px; line-height: 1.6; min-height: 60px; white-space: pre-wrap; }
+.idea-card { border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; margin: 8px 0; }
+.idea-card-header { display: flex; align-items: center; gap: 8px; }
+.idea-title { font-weight: 600; flex: 1; }
+.idea-status { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #e8edf2; }
+.idea-status.status-sparked { background: #fff3cd; color: #856404; }
+.idea-status.status-adopted { background: #d4edda; color: #155724; }
+.idea-status.status-archived { background: #e2e3e3; color: #6c757d; }
+.idea-content { font-size: 13px; color: #555; margin: 6px 0; }
+.idea-meta { display: flex; gap: 8px; font-size: 12px; color: #999; flex-wrap: wrap; }
+.idea-tag { padding: 1px 6px; border-radius: 4px; background: #e3edf6; color: #2980b9; }

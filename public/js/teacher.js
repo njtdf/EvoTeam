@@ -459,7 +459,7 @@ async function switchToDashboard() {
      user.value = u
      await loadStudents()
      const hash = window.location.hash.slice(1)
-     const validTabs = ['graduation', 'dashboard','todo','notify','projects','cockpit','meeting','kanban','revision','skills','submissions','review','exam','teaching','workload','invoice','interview','valuecycle','agents','calendar','knowledge']
+     const validTabs = ['graduation', 'dashboard','todo','notify','daily','projects','ideas','cockpit','meeting','kanban','revision','skills','submissions','review','exam','teaching','workload','invoice','interview','valuecycle','agents','calendar','knowledge']
      if (hash && validTabs.includes(hash)) {
        if (hash === 'dashboard') await switchToDashboard()
         else if (hash === 'todo') await switchToTodo()
@@ -481,8 +481,10 @@ async function switchToDashboard() {
        else if (hash === 'interview') await switchToInterview()
         else if (hash === 'agents') switchToAgents()
         else if (hash === 'calendar') await switchToCalendar()
-       else if (hash === 'valuecycle') await switchToValueCycle()
-      else if (hash === 'knowledge') await switchToKnowledge()
+        else if (hash === 'valuecycle') await switchToValueCycle()
+        else if (hash === 'daily') await switchToDailyBrief()
+        else if (hash === 'ideas') await switchToIdeas()
+        else if (hash === 'knowledge') await switchToKnowledge()
      } else {
        await switchToDashboard()
      }
@@ -797,7 +799,7 @@ async function switchToDashboard() {
 
     async function switchToValueCycle() {
       activeTab.value = 'valuecycle'
-      await Promise.all([loadGroupVc(), loadAlignments()])
+      await Promise.all([loadGroupVc(), loadAlignments(), loadGoalTree()])
     }
 
     async function loadGroupVc() {
@@ -1495,7 +1497,85 @@ async function switchToDashboard() {
     }
 
 
-return {
+
+    // --- Daily Brief + Goal Tree + Ideas ---
+    const dailyBrief = ref(null)
+    const goalTree = ref(null)
+    const ideaList = ref([])
+    const ideaInput = ref('')
+    const ideaStreaming = ref(false)
+    const ideaStreamText = ref('')
+
+    async function switchToDailyBrief() {
+      activeTab.value = 'daily'
+      await loadDailyBrief()
+    }
+
+    async function loadDailyBrief() {
+      try { dailyBrief.value = await api('/api/daily-brief') }
+      catch(e) { console.error('dailyBrief:',
+e
+) }
+    }
+
+    async function switchToIdeas() {
+      activeTab.value = 'ideas'
+      await Promise.all([loadIdeas(), loadGoalTree()])
+    }
+
+    async function loadGoalTree() {
+      try { goalTree.value = await api('/api/goal-tree') }
+      catch(e) { console.error('goalTree:',
+e
+) }
+    }
+
+    async function loadIdeas() {
+      try { const r = await api('/api/ideas');
+ideaList.value
+= r.ideas || [] }
+      catch(e) { console.error('ideas:',
+e
+) }
+    }
+
+    async function sparkIdeas() {
+      if (ideaStreaming.value) return
+      ideaStreaming.value = true
+      ideaStreamText.value = ''
+      try {
+        const resp = await fetch('/api/ideas/spark', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idea: ideaInput.value })
+        })
+        const reader = resp.body.getReader()
+        const decoder = new TextDecoder()
+        let buf = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += decoder.decode(value, { stream: true })
+          const lines = buf.split('\n')
+          buf = lines.pop()
+          for (const line of lines) {
+            if (!line.startsWith('data:')) continue
+            try {
+              const data = JSON.parse(line.slice(5).trim())
+              if (data.chunk) ideaStreamText.value += data.chunk
+              if (data.error) ideaStreamText.value += "\nError: " + data.error
+            } catch {}
+          }
+        }
+      } catch(e) {
+        ideaStreamText.value = 'Error: ' + e.message
+      }
+      ideaStreaming.value = false
+    }
+    return {
+      // Daily Brief + Goal Tree + Ideas
+      dailyBrief, goalTree, ideaList, ideaInput, ideaStreaming, ideaStreamText,
+      switchToDailyBrief, switchToIdeas, sparkIdeas,
       gradStudentId, gradSummary, switchToGraduation, loadGraduation, updateGradReq, updateGradNotes, seedGraduation,
       user, students, selectedStudentId, report, summary, chatMessages,
       // 价值链
