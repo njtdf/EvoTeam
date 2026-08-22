@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EvoTeam - 课题组 AI 原生工作台</title>
-<link rel="stylesheet" href="/css/app.css?v=0722">
+<link rel="stylesheet" href="/css/app.css?v=07.23">
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 </head>
 <body>
@@ -56,7 +56,7 @@
 </div>
 <div class="version-badge" id="ver-badge" style="text-align:center;color:#999;font-size:12px;margin-top:24px">EvoTeam</div>
 <script>fetch('/api/version').then(r=>r.json()).then(d=>{const el=document.getElementById('ver-badge');if(el)el.textContent='EvoTeam v'+d.version}).catch(()=>{})</script>
-<script src="/js/api.js?v=0722"></script>
-<script src="/js/login.js?v=0722"></script>
+<script src="/js/api.js?v=07.23"></script>
+<script src="/js/login.js?v=07.23"></script>
 </body>
 </html>

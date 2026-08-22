@@ -8,7 +8,7 @@
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<link rel="stylesheet" href="/css/app.css?v=0722">
+<link rel="stylesheet" href="/css/app.css?v=07.23">
 </head>
 <body>
 <div id="app">
@@ -468,16 +468,7 @@
         <div class="stat-card"><div class="stat-num">{{ boardStats.byStatus.in_progress || 0 }}</div><div class="stat-label">进行中</div></div>
         <div class="stat-card stat-overdue" v-if="boardStats.overdue"><div class="stat-num">{{ boardStats.overdue }}</div><div class="stat-label">逾期</div></div>
       </div>
-      <div class="welcome-news" v-if="news.length">
-        <div class="card-title">每日研究动态 (RSS)</div>
-        <div class="rss-list">
-          <a v-for="(item, i) in news" :key="i" :href="item.link" target="_blank" class="rss-item">
-            <span class="rss-source">{{ item.source }}</span>
-            <span class="rss-title">{{ item.title }}</span>
-          </a>
-        </div>
-        <div v-if="newsError" class="text-muted" style="font-size:11px">{{ newsError }}</div>
-      </div>
+      <!-- RSS moved to 灵感工厂 -->
     </div>
     <!-- 四列看板 -->
     <div class="kanban-board">
@@ -1812,9 +1803,18 @@
 
   <!-- Ideas / Inspiration Factory Tab -->
   <div v-if="activeTab==='ideas'" class="ideas-view" style="padding:16px">
-    <div class="card">
-      <div class="card-title">灵感工厂</div>
-      <p class="ideas-intro">AGENT 读取每日信息 + 价值目标树，结合你的输入，生成创新研究想法</p>
+        <div class="card" v-if="news.length" style="margin-bottom:12px">
+      <div class="card-title">📰 每日研究动态 (RSS)</div>
+      <div class="rss-list">
+        <a v-for="(item, i) in news" :key="i" :href="item.link" target="_blank" class="rss-item">
+          <span class="rss-source">{{ item.source }}</span>
+          <span class="rss-title">{{ item.title }}</span>
+        </a>
+      </div>
+      <div v-if="newsError" class="text-muted" style="font-size:11px">{{ newsError }}</div>
+    </div>
+    <div class="card"><div class="card-title">灵感工厂</div>
+      <p class="ideas-intro">AGENT 读取研究动态 + 价值目标树，结合你的输入，生成创新研究想法</p>
       <div class="ideas-input-area">
         <textarea v-model="ideaInput" class="ideas-textarea" placeholder="输入你的灵感或问题（如：电动汽车充电网络韧性如何与移动储能结合？）"></textarea>
         <button class="btn btn-primary" @click="sparkIdeas" :disabled="ideaStreaming">⚡ 点燃灵感</button>
@@ -1860,7 +1860,7 @@
 
 
 
-<script src="/js/api.js?v=0722"></script>
-<script src="/js/teacher.js?v=0722"></script>
+<script src="/js/api.js?v=07.23"></script>
+<script src="/js/teacher.js?v=07.23"></script>
 </body>
 </html>

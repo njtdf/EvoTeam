@@ -269,7 +269,7 @@ createApp({
     // ===== 看板 Tab =====
     async function switchToKanban() {
       activeTab.value = 'kanban'
-      await Promise.all([loadTasks(), loadBoardStats(), loadNews()])
+      await Promise.all([loadTasks(), loadBoardStats()])
     }
 
     async function loadTasks() {
@@ -1527,7 +1527,7 @@ e
 
     async function switchToIdeas() {
       activeTab.value = 'ideas'
-      await Promise.all([loadIdeas(), loadGoalTree(), loadSharedIdeas()])
+      await Promise.all([loadIdeas(), loadGoalTree(), loadSharedIdeas(), loadNews()])
     }
 
     async function loadGoalTree() {

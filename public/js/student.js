@@ -706,7 +706,14 @@ status: "on_track"
       } catch(e) {
         console.error('Profile load error:', e)
       }
-      profileLoading.value = false
+
+
+    async function loadNews() {
+      try {
+        const data = await api('/api/news')
+        news.value = data.news || []
+      } catch(e) { news.value = [] }
+    }      profileLoading.value = false
     }
 
 
@@ -734,6 +741,7 @@ status: "on_track"
     
     // ===== Daily Brief + Ideas (Wave 7) =====
     const dailyBrief = ref(null)
+    const news = ref([])
     const ideaList = ref([])
     const ideaInput = ref('')
     const ideaStreaming = ref(false)
@@ -753,6 +761,7 @@ status: "on_track"
       try {
         const r = await api('/api/ideas'); ideaList.value = r.ideas || []
         const sr = await api('/api/ideas?shared=true'); sharedIdeas.value = sr.ideas || []
+    await loadNews()
       }
       catch(e) { console.error('ideas:', e) }
     }
@@ -860,7 +869,7 @@ status: "on_track"
       myProfile, profileLoading, switchToProfile, capabilityLabels,
       courseData, courseLoading, courseSubTab, switchToCourse,
       // Daily Brief + Ideas
-      dailyBrief, ideaList, ideaInput, ideaStreaming, ideaStreamText,
+      dailyBrief, news, ideaList, ideaInput, ideaStreaming, ideaStreamText,
       sharedIdeas, ideaShareTitle, ideaShareContent,
       myTaskStats, saveSparkResult, likeIdea, likedByMe,
       switchToDailyBrief, switchToIdeas, sparkIdeas,
