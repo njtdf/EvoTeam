@@ -1,2 +1,0 @@
-# @cordisjs/plugin-hmr
-

@@ -940,17 +940,7 @@ async function switchToDashboard() {
       } catch (e) { console.error('updateDecisionOutcome:', e.message) }
     }
    // --- Agent 面板 ---
-  const agents = ref([
-     { id: 'manager', icon: '🧑‍💼', shortName: '大管家', name: '课题组大管家', role: '总管', description: '总览所有学生状态,触发简报生成', gradient: 'linear-gradient(135deg,#667eea,#764ba2)', status: 'active', capabilities: ['学生状态','简报生成','风险预警','任务调度'] },
-     { id: 'summary', icon: '📝', shortName: '总结', name: 'AI 总结 Agent', role: '周报分析', description: '解析学生双周报，生成总结/风险/建议', color: 'blue', status: 'active', capabilities: ['双周报解析','风险判断','建议生成'] },
-     { id: 'meeting', icon: '🗓️', shortName: '会议', name: '会议抽取 Agent', role: '会议纪要', description: '从会议纪要抽取决议和行动项', color: 'green', status: 'active', capabilities: ['纪要解析','行动项抽取','姓名匹配'] },
-     { id: 'stt', icon: '🎤', shortName: 'STT', name: 'STT Agent', role: '语音转写', description: '实时会议语音转文字', color: 'orange', status: 'idle', capabilities: ['实时STT','FunASR','Web Speech API'] },
-     { id: 'skill', icon: '🧰', shortName: '技能', name: 'Skill Runner', role: '科研工具', description: '运行 idea-evaluator, paper-polish 等', color: 'purple', status: 'active', capabilities: ['11个科研Skill','SSE流式','论文评估'] },
-     { id: 'progress', icon: '📈', shortName: '进度', name: 'Progress Tracker', role: '进度追踪', description: '读取 Codex 历史，辅助生成周报草稿', color: 'teal', status: 'active', capabilities: ['Codex历史','周报草稿','进度追踪'] },
-     { id: 'review', icon: '🔍', shortName: '审稿', name: 'Review Agent', role: '审稿辅助', description: '论文投稿前审查 (5维度)', color: 'red', status: 'idle', capabilities: ['5维度审查','SSE流式','修改建议'] },
-     { id: 'interview', icon: '🎯', shortName: '面试', name: 'Interview Agent', role: '面试/答辩', description: '模拟答辩场景，推荐回答策略', color: 'pink', status: 'idle', capabilities: ['答辩模拟','回答策略','追问训练'] },
-     { id: 'valuechain', icon: '🔗', shortName: '价值链', name: 'Value Chain Agent', role: '价值链对齐', description: '课题组与学生价值链对齐分析', color: 'indigo', status: 'active', capabilities: ['价值对齐','毕业追踪','能力画像'] },
-  ])
+  const agents = ref([])
 
   function switchToAgents() {
     activeTab.value = 'agents'
@@ -1003,61 +993,6 @@ async function switchToDashboard() {
     } catch(e) { console.error('KB load error:', e) }
     kbLoading.value = false
   }
-
-  // ===== Knowledge Navigator: Agent 对话 =====
-    const activeAgentId = ref(null)
-    const agentChatMessages = ref([])
-    const agentChatInput = ref('')
-    const agentStreaming = ref(false)
-    const agentStreamText = ref('')
-    const activeAgent = computed(() => agents.value.find(a => a.id === activeAgentId.value) || cAgents.find(a => a.id === activeAgentId.value) || {})
-
-    async function selectAgent(id) {
-      if (activeAgentId.value === id) { activeAgentId.value = null; return }
-      activeAgentId.value = id
-      agentChatMessages.value = []
-      try {
-        const r = await api('/api/agent-chat/' + id)
-        if (r.messages) agentChatMessages.value = r.messages
-        nextTick(() => { const el = document.querySelector('.agent-chat-messages'); if (el) el.scrollTop = el.scrollHeight })
-      } catch {}
-    }
-
-    async function sendAgentChat() {
-      const msg = agentChatInput.value.trim()
-      if (!msg || agentStreaming.value || !activeAgentId.value) return
-      agentChatInput.value = ''
-      agentChatMessages.value.push({ role: 'user', content: msg })
-      agentStreaming.value = true
-      agentStreamText.value = ''
-      try {
-        const resp = await fetch('/api/agent-chat/' + activeAgentId.value, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          credentials: 'include', body: JSON.stringify({ message: msg })
-        })
-        const reader = resp.body.getReader()
-        const dec = new TextDecoder()
-        let buf = ''
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          buf += dec.decode(value, { stream: true })
-          const lines = buf.split('\n')
-          buf = lines.pop()
-          for (const line of lines) {
-            if (line.startsWith('data:')) {
-              const data = line.slice(5).trim()
-              if (data === '[DONE]') break
-              try { agentStreamText.value += JSON.parse(data).content || '' } catch { agentStreamText.value += data }
-            }
-          }
-        }
-        if (agentStreamText.value) agentChatMessages.value.push({ role: 'ai', content: agentStreamText.value })
-      } catch (e) { agentChatMessages.value.push({ role: 'ai', content: '请求失败: ' + e.message }) }
-      agentStreaming.value = false
-      agentStreamText.value = ''
-      nextTick(() => { const el = document.querySelector('.agent-chat-messages'); if (el) el.scrollTop = el.scrollHeight })
-    }
 
     // ===== 会议 sub-tabs =====
     const meetingSubTab = ref('minutes')
@@ -1732,8 +1667,6 @@ function autoSwitchAgent(tab) {
       kbFiles, kbLoading, kbPath, loadKbFiles,
       kbSearch, kbFilteredFiles, kbViewingFile, kbViewingFileName, kbFileContent, viewKbFile,
       // Knowledge Navigator
-      activeAgentId, agentChatMessages, agentChatInput, agentStreaming, agentStreamText,
-      activeAgent, selectAgent, sendAgentChat,
       // 会议 sub-tabs + STT
       meetingSubTab, sttRecording, sttTranscript, sttError, sttSummarizing,
       startSTT, stopSTT, sttSummarize,
