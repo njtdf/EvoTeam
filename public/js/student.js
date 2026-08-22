@@ -470,7 +470,7 @@ status: "on_track"
 
     // Restore tab from URL hash on initial load
     const hash = window.location.hash.slice(1)
-    const validTabs = ['report', 'daily', 'kanban', 'calendar', 'assistant', 'ideas', 'kb', 'skills', 'interview']
+    const validTabs = ['report', 'kanban', 'calendar', 'assistant', 'ideas', 'kb', 'skills', 'interview']
     if (hash && validTabs.includes(hash)) {
       activeTab.value = hash
       if (hash === 'kanban') switchToKanban()
@@ -479,7 +479,6 @@ status: "on_track"
       else if (hash === 'kb') switchToKb()
       else if (hash === 'skills') switchToSkills()
       else if (hash === 'interview') switchToInterview()
-      else if (hash === 'daily') switchToDailyBrief()
       else if (hash === 'ideas') switchToIdeas()
     }
 
@@ -829,12 +828,45 @@ status: "on_track"
       return idea.liked_by && idea.liked_by.includes(user.value.id)
     }
 
+    // ===== Global Chat Bar =====
+    const globalChatExpanded = ref(false)
+    const globalChatMessages = ref([])
+    const globalChatInput = ref('')
+    const globalChatStreaming = ref(false)
+    const globalChatEl = ref(null)
+
+    async function sendGlobalChat() {
+      const msg = globalChatInput.value.trim()
+      if (!msg || globalChatStreaming.value) return
+      globalChatInput.value = ''
+      globalChatStreaming.value = true
+      globalChatMessages.value.push({ role: 'user', content: msg })
+      globalChatMessages.value.push({ role: 'assistant', content: '', _streaming: true })
+      try {
+        await streamChat('/api/global-chat', { message: msg }, (chunk) => {
+          const last = globalChatMessages.value[globalChatMessages.value.length - 1]
+          if (last && last.role === 'assistant' && last._streaming) {
+            last.content += chunk
+          }
+        }, () => {
+          const last = globalChatMessages.value[globalChatMessages.value.length - 1]
+          if (last && last._streaming) delete last._streaming
+        })
+      } catch (e) {
+        globalChatMessages.value.push({ role: 'assistant', content: 'Error: ' + e.message })
+      }
+      globalChatStreaming.value = false
+      await nextTick()
+      if (globalChatEl.value) globalChatEl.value.scrollTop = globalChatEl.value.scrollHeight
+    }
+
+
     return {
       gradSummary, switchToGraduation,
       user, markdown, previewHtml, submitting, summary, summaryLoading,
       roleLabel, updatePreview, loadTemplate, clearEditor, doSubmit, logout,
     formatHistoryReport,
-      formatMessage,
+      formatMessage, globalChatExpanded, globalChatMessages, globalChatInput, globalChatStreaming, globalChatEl, sendGlobalChat,
       draftLoading, generateDraft,
       reportHistory, showHistory, historyViewReport,
     loadReportHistory, toggleHistory, viewHistoryReport, closeHistoryView, startNewReport,

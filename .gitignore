@@ -81,3 +81,8 @@ labos/autoprof.db-wal
 _cookie.txt
 _server.log
 *.log
+
+_server_out.txt
+_*.mjs
+_*.txt
+err.txt

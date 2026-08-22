@@ -2158,7 +2158,44 @@ app.post('/api/ideas/spark', requireAuth, async (req, res) => {
   res.end();
 });
 
-const server = app.listen(PORT, () => {
+const server = // --- API: Global Chat (bottom bar, all pages) ---
+app.post('/api/global-chat', requireAuth, async (req, res) => {
+  const u = req.user
+  const message = req.body?.message?.trim()
+  if (!message) { res.status(400).json({ error: 'no message' }); return }
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive'
+  })
+  let sys = '你是课题组AI助手。'
+  let ctx = ''
+  if (u.role === 'teacher') {
+    try { ctx = buildManagerContext() } catch {}
+    sys = '你是课题组大管家AI助手。你可以看到全部学生状态数据。简洁回答。'
+  } else {
+    try { ctx = await buildStudentContext(u.id) || '' } catch {}
+    sys = '你是学生AI助手。你可以看到该学生的周报、任务、AI总结。简洁回答。'
+  }
+  const msgs = [
+    { role: 'system', content: sys + '\n' + ctx },
+    { role: 'user', content: message }
+  ]
+  let fullText = ''
+  chatStream(msgs, (chunk) => {
+    fullText += chunk
+    res.write('data: ' + JSON.stringify({ content: chunk }) + '\n\n')
+  }).then(() => {
+    res.write('data: [DONE]\n\n')
+    res.end()
+  }).catch(e => {
+    res.write('data: ' + JSON.stringify({ error: e.message }) + '\n\n')
+    res.end()
+  })
+})
+
+
+app.listen(PORT, () => {
   console.log(`\n  AutoProf Lab Brief v2 ready:`)
   console.log(`  Login:    http://localhost:${PORT}/login`)
   console.log(`  Teacher:  http://localhost:${PORT}/teacher`)

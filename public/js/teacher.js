@@ -466,7 +466,7 @@ async function switchToDashboard() {
      user.value = u
      await loadStudents()
      const hash = window.location.hash.slice(1)
-     const validTabs = ['graduation', 'dashboard','todo','notify','daily','projects','ideas','cockpit','meeting','kanban','revision','skills','submissions','review','exam','teaching','workload','invoice','interview','valuecycle','agents','calendar','knowledge']
+     const validTabs = ['graduation', 'dashboard','todo','notify','projects','ideas','cockpit','meeting','kanban','revision','skills','submissions','review','exam','teaching','workload','invoice','interview','valuecycle','agents','calendar','knowledge']
      if (hash && validTabs.includes(hash)) {
        if (hash === 'dashboard') await switchToDashboard()
         else if (hash === 'todo') await switchToTodo()
@@ -489,7 +489,6 @@ async function switchToDashboard() {
         else if (hash === 'agents') switchToAgents()
         else if (hash === 'calendar') await switchToCalendar()
         else if (hash === 'valuecycle') await switchToValueCycle()
-        else if (hash === 'daily') await switchToDailyBrief()
         else if (hash === 'ideas') await switchToIdeas()
         else if (hash === 'knowledge') await switchToKnowledge()
      } else {
@@ -1156,13 +1155,13 @@ async function switchToDashboard() {
     async function loadTodo() {
       try {
         const data = await api('/api/tasks?status=todo,in_progress')
-        todoItems.value = data.tasks || []
+        todoItems.value = (data.tasks || []).filter(t => t.owner_student_id === user.value.id)
       } catch { todoItems.value = [] }
     }
     async function addTodo() {
       if (!newTodoText.value.trim()) return
       try {
-        await api('/api/tasks', 'POST', { title: newTodoText.value, priority: newTodoPriority.value, source: 'manual' })
+        await api('/api/tasks', 'POST', { title: newTodoText.value, priority: newTodoPriority.value, source: 'manual', owner_student_id: user.value.id, owner_name: user.value.name })
         newTodoText.value = ''
         await loadTodo()
       } catch (e) { showToast('添加失败: ' + e.message) }
@@ -1595,6 +1594,39 @@ e
       return idea.liked_by && idea.liked_by.includes(user.value.id)
     }
 
+    // ===== Global Chat Bar =====
+    const globalChatExpanded = ref(false)
+    const globalChatMessages = ref([])
+    const globalChatInput = ref('')
+    const globalChatStreaming = ref(false)
+    const globalChatEl = ref(null)
+
+    async function sendGlobalChat() {
+      const msg = globalChatInput.value.trim()
+      if (!msg || globalChatStreaming.value) return
+      globalChatInput.value = ''
+      globalChatStreaming.value = true
+      globalChatMessages.value.push({ role: 'user', content: msg })
+      globalChatMessages.value.push({ role: 'assistant', content: '', _streaming: true })
+      try {
+        await streamChat('/api/global-chat', { message: msg }, (chunk) => {
+          const last = globalChatMessages.value[globalChatMessages.value.length - 1]
+          if (last && last.role === 'assistant' && last._streaming) {
+            last.content += chunk
+          }
+        }, () => {
+          const last = globalChatMessages.value[globalChatMessages.value.length - 1]
+          if (last && last._streaming) delete last._streaming
+        })
+      } catch (e) {
+        globalChatMessages.value.push({ role: 'assistant', content: 'Error: ' + e.message })
+      }
+      globalChatStreaming.value = false
+      await nextTick()
+      if (globalChatEl.value) globalChatEl.value.scrollTop = globalChatEl.value.scrollHeight
+    }
+
+
     return {
       // Daily Brief + Goal Tree + Ideas
       dailyBrief, goalTree, ideaList, ideaInput, ideaStreaming, ideaStreamText,
@@ -1611,7 +1643,7 @@ e
      chatInput, chatStreaming, loadingReport, reportHtml, chatMessagesEl,
      reportContext,
      onStudentChange, sendChat, logout,
-     formatMessage,
+     formatMessage, globalChatExpanded, globalChatMessages, globalChatInput, globalChatStreaming, globalChatEl, sendGlobalChat,
      switchToCockpit,
      // 总览
       dashboardData, loadingDashboard, briefGenerating,
@@ -1698,6 +1730,9 @@ e
       kbNextPage, kbPrevPage,
       // 课程
       courseData, courseLoading, courseSubTab, switchToCourse, updateCourseWeek,
+      // 全局AI底栏
+      globalChatExpanded, globalChatMessages, globalChatInput,
+      globalChatStreaming, globalChatEl, sendGlobalChat,
     }
   },
 }).mount('#app')

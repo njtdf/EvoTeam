@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EvoTeam - Student</title>
-<link rel="stylesheet" href="/css/app.css?v=07.23">
+<link rel="stylesheet" href="/css/app.css?v=07.24">
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -18,7 +18,7 @@
       <nav class="sidebar-nav">
         <div class="sidebar-nav-section">核心</div>
         <a class="sidebar-nav-item" :class="{active:activeTab==='report'}" @click="activeTab='report'"><span class="nav-icon">📝</span> 周报</a>
-        <a class="sidebar-nav-item" :class="{active:activeTab==='daily'}" @click="switchToDailyBrief"><span class="nav-icon">📰</span> 每日信息</a>
+        <!-- daily removed -->
         <a class="sidebar-nav-item" :class="{active:activeTab==='kanban'}" @click="switchToKanban"><span class="nav-icon">📋</span> 任务</a>
         <a class="sidebar-nav-item" :class="{active:activeTab==='calendar'}" @click="switchToCalendar"><span class="nav-icon">📅</span> 日历</a>
         <a class="sidebar-nav-item" :class="{active:activeTab==='kb'}" @click="switchToKb"><span class="nav-icon">📚</span> 知识库</a>
@@ -616,37 +616,6 @@
   </div>
 
 
-  <!-- Daily Brief Tab -->
-  <div v-if="activeTab==='daily'" class="daily-brief-view" style="padding:16px">
-    <div class="card" v-if="dailyBrief">
-      <div class="card-title">每日信息 — {{ dailyBrief.date }}</div>
-      <div class="db-stats-row">
-        <span class="db-stat-pill" :class="{danger: dailyBrief.overdue_tasks && dailyBrief.overdue_tasks.length > 0}">逾期 {{ dailyBrief.overdue_tasks ? dailyBrief.overdue_tasks.length : 0 }}</span>
-        <span class="db-stat-pill">今日到期 {{ dailyBrief.due_today ? dailyBrief.due_today.length : 0 }}</span>
-        <span class="db-stat-pill">进行中 {{ dailyBrief.in_progress ? dailyBrief.in_progress.length : 0 }}</span>
-      </div>
-    </div>
-    <div class="card" v-if="dailyBrief && dailyBrief.overdue_tasks && dailyBrief.overdue_tasks.length > 0">
-      <div class="card-title">⏰ 逾期任务</div>
-      <div v-for="t in dailyBrief.overdue_tasks" :key="t.task_id" class="db-task-item">
-        <span class="db-task-title">{{ t.title }}</span>
-        <span class="db-task-deadline">{{ t.deadline }}</span>
-      </div>
-    </div>
-    <div class="card" v-if="dailyBrief && dailyBrief.in_progress && dailyBrief.in_progress.length > 0">
-      <div class="card-title">⏳ 进行中</div>
-      <div v-for="t in dailyBrief.in_progress" :key="t.task_id" class="db-task-item">
-        <span class="db-task-title">{{ t.title }}</span>
-      </div>
-    </div>
-    <div class="card" v-if="dailyBrief && dailyBrief.events && dailyBrief.events.length > 0">
-      <div class="card-title">📌 外部动态</div>
-      <div v-for="e in dailyBrief.events" :key="e.id || e.title" class="db-event-item">
-        <span class="db-event-type">{{ e.type || "news" }}</span>
-        <span class="db-event-title">{{ e.title || e.summary }}</span>
-      </div>
-    </div>
-  </div>
 
   <!-- Ideas / Inspiration Factory Tab -->
   <div v-if="activeTab==='ideas'" class="ideas-view" style="padding:16px">
@@ -709,10 +678,29 @@
     </div>
   </div>
 
-</main>
+
+    <!-- Global AI Chat Bar -->
+    <div class="global-chat-bar" :class="{expanded: globalChatExpanded}">
+      <div class="global-chat-header" @click="globalChatExpanded = !globalChatExpanded">
+        <span>🤖 AI 助手</span>
+        <span class="global-chat-toggle">{{ globalChatExpanded ? '▾' : '▴' }}</span>
+      </div>
+      <div class="global-chat-body" v-show="globalChatExpanded">
+        <div class="global-chat-messages" ref="globalChatEl">
+          <div v-for="(msg, i) in globalChatMessages" :key="i" class="chat-bubble" :class="msg.role">
+            <div v-html="formatMessage(msg.content)"></div>
+          </div>
+        </div>
+        <div class="global-chat-input-row">
+          <input class="global-chat-input" v-model="globalChatInput" placeholder="和 AI 对话..." @keydown.enter.exact.prevent="sendGlobalChat">
+          <button class="btn btn-primary btn-sm" @click="sendGlobalChat" :disabled="globalChatStreaming">{{ globalChatStreaming ? '...' : '发送' }}</button>
+        </div>
+      </div>
+    </div>
+    </main>
   </div>
 </div>
-<script src="/js/api.js?v=07.23"></script>
-<script src="/js/student.js?v=07.23"></script>
+<script src="/js/api.js?v=07.24"></script>
+<script src="/js/student.js?v=07.24"></script>
 </body>
 </html>
