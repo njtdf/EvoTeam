@@ -67,6 +67,47 @@ createApp({
       { status: 'done', label: '已完成' },
       { status: 'blocked', label: '阻塞' },
     ]
+    const kanbanViewMode = ref("status")
+    const projectCols = computed(() => {
+      const map = {}
+      for (const t of tasks.value) {
+        const p = t.project || "unassigned"
+        if (!map[p]) map[p] = []
+        map[p].push(t)
+      }
+      return Object.entries(map).map(([name, items]) => ({ name, items }))
+    })
+    function tasksByProject(name) {
+      const col = projectCols.value.find(c => c.name === name)
+      return col ? col.items : []
+    }
+    function isActionPromoted(taskId) {
+      return tasks.value.some(t => t.source_ref === taskId)
+    }
+    async function bulkPromoteMeeting(date) {
+      if (!selectedMeeting.value || !selectedMeeting.value.actions) return
+      const acts = selectedMeeting.value.actions.actions || []
+      const ids = acts.filter(a => a.owner_student_id).map(a => a.task_id)
+      if (!ids.length) { showToast('No assigned actions'); return }
+      try {
+        const data = await api('/api/tasks/from-meeting/bulk', { method: 'POST', body: JSON.stringify({ date, task_ids: ids }) })
+        showToast("Promoted " + (data.created?.length||0) + " tasks")
+        await loadTasks(); await loadBoardStats()
+      } catch (e) { showToast('Bulk promote failed: ' + e.message) }
+    }
+    async function batchSetDeadlines() {
+      try {
+        const data = await api('/api/tasks/batch-deadline', { method: 'POST' })
+        showToast("Set " + (data.updated||0) + " deadlines")
+        await loadTasks(); await loadBoardStats()
+      } catch (e) { showToast('Batch deadline failed: ' + e.message) }
+    }
+    async function createTaskFromRisk(studentId, riskText) {
+      try {
+        const data = await api('/api/tasks/from-risk', { method: 'POST', body: JSON.stringify({ student_id: studentId, risk_text: riskText }) })
+        if (data.ok) { showToast("Created tracking task: " + (data.task?.title||"").slice(0,40)); await loadTasks(); await loadBoardStats() }
+      } catch (e) { showToast('Create from risk failed: ' + e.message) }
+    }
 
     const reportHtml = computed(() => {
       if (!report.value) return ''
@@ -1634,6 +1675,8 @@ function onChatMouseLeave() {
      switchToKanban,
       taskStatusPct, loadTasks, loadBoardStats, loadNews, tasksByStatus,
      isOverdue, openTaskModal, createTask, updateTaskStatus, deleteTask, promoteToKanban,
+      bulkPromoteMeeting, batchSetDeadlines, createTaskFromRisk, isActionPromoted,
+      kanbanViewMode, projectCols, tasksByProject,
      taskDetail, showTaskDetail, taskDetailLoading, openTaskDetail, closeTaskDetail,
      // Phase 4: Promise Ledger
      promiseStats, consistencyData, overduePromises, upcomingPromises, showPromisePanel,

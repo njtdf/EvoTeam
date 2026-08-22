@@ -236,7 +236,7 @@
           </div>
          <div class="summary-section" v-if="summary.risks && summary.risks.length">
             <div class="summary-label">风险</div>
-            <ul class="summary-risks"><li v-for="r in summary.risks" :key="r">{{ r }}</li></ul>
+            <ul class="summary-risks"><li v-for="(r, i) in summary.risks" :key="i" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span>{{ r }}</span><button class="btn btn-sm btn-secondary" @click="createTaskFromRisk(selectedStudentId, r)" style="font-size:11px;padding:2px 8px;white-space:nowrap">Track</button></li></ul>
           </div>
          <div class="summary-section" v-if="summary.suggestions && summary.suggestions.length">
             <div class="summary-label">建议</div>
@@ -341,6 +341,7 @@
           <div class="summary-label">决议</div>
           <ul class="summary-risks"><li v-for="(d,i) in selectedMeeting.actions.decisions" :key="i">{{ d }}</li></ul>
         </div>
+        <div style="margin:8px 0;display:flex;gap:8px;align-items:center"><button class="btn btn-primary btn-sm" @click="bulkPromoteMeeting(selectedMeetingDate)" v-if="selectedMeeting.actions && selectedMeeting.actions.actions && selectedMeeting.actions.actions.length">Promote All to Tasks</button><span class="text-muted" style="font-size:12px">Only assigned actions will be promoted</span></div>
         <table class="actions-table" v-if="selectedMeeting.actions && selectedMeeting.actions.actions && selectedMeeting.actions.actions.length">
           <thead>
             <tr><th>ID</th><th>任务</th><th>负责人</th><th>截止</th><th>状态</th><th>看板</th></tr>
@@ -365,7 +366,8 @@
                 </select>
               </td>
               <td>
-                <button class="btn btn-sm btn-secondary" @click="promoteToKanban(selectedMeetingDate, a.task_id)">→任务</button>
+                <span v-if="isActionPromoted(a.task_id)" class="tag tag-on-track" style="font-size:11px">Promoted</span>
+                <button v-else class="btn btn-sm btn-secondary" @click="promoteToKanban(selectedMeetingDate, a.task_id)">→任务</button>
               </td>
             </tr>
           </tbody>
@@ -423,6 +425,7 @@
       <!-- RSS moved to 灵感工厂 -->
     </div>
     <!-- 四列看板 -->
+    <div style="display:flex;gap:8px;margin:8px 0;align-items:center"><button class="btn btn-sm" :class="kanbanViewMode==='status' ? 'btn-primary' : 'btn-secondary'" @click="kanbanViewMode='status'">By Status</button><button class="btn btn-sm" :class="kanbanViewMode==='project' ? 'btn-primary' : 'btn-secondary'" @click="kanbanViewMode='project'">By Project</button><button class="btn btn-sm btn-secondary" @click="batchSetDeadlines()">Set Deadlines</button></div>
     <div class="kanban-board">
       <div class="kanban-col" v-for="col in kanbanCols" :key="col.status">
         <div class="kanban-col-header">
@@ -432,7 +435,7 @@
         <div class="kanban-col-body">
          <!-- Phase 4: 增强任务卡片 -->
          <div class="task-card task-card-enhanced" v-for="t in tasksByStatus(col.status)" :key="t.task_id"
-              :class="'task-priority-' + (t.priority || 'medium')"
+              :class="['task-priority-' + (t.priority || 'medium'), {overdue: isOverdue(t)}]"
               @click="openTaskDetail(t.task_id)">
            <div class="task-card-title">{{ t.title }}</div>
            <div class="task-card-desc" v-if="t.description">{{ t.description.slice(0, 80) }}{{ t.description.length > 80 ? '...' : '' }}</div>
@@ -463,6 +466,25 @@
       </div>
     </div>
     <!-- 新建任务 -->
+    <div class="kanban-board" v-if="kanbanViewMode==='project'">
+      <div class="kanban-col" v-for="col in projectCols" :key="col.name">
+        <div class="kanban-col-header">{{ col.name }} <span class="tag">{{ col.items.length }}</span></div>
+        <div class="kanban-col-body">
+          <div class="task-card task-card-enhanced" v-for="t in col.items" :key="t.task_id"
+               :class="['task-priority-' + (t.priority || 'medium'), {overdue: isOverdue(t)}]"
+               @click="openTaskDetail(t.task_id)">
+            <div class="task-card-title">{{ t.title }}</div>
+            <div class="task-card-meta">
+              <span v-if="t.owner_name">{{ t.owner_name }}</span>
+              <span v-else class="text-muted">Unassigned</span>
+              <span v-if="t.deadline" class="task-deadline" :class="{overdue: isOverdue(t)}">{{ t.deadline }}</span>
+              <span class="tag" :class="'status-' + t.status">{{ t.status }}</span>
+            </div>
+          </div>
+          <div v-if="col.items.length === 0" class="empty-state" style="padding:16px">None</div>
+        </div>
+      </div>
+    </div>
     <button class="btn btn-primary" @click="openTaskModal()" style="margin:12px">+ 新建任务</button>
     <div class="modal-overlay" v-if="showTaskModal" @click.self="showTaskModal=false">
       <div class="modal-card">

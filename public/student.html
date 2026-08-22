@@ -47,7 +47,16 @@
         <button class="btn btn-secondary btn-sm" @click="toggleHistory">
           📋 历史周报<span v-if="reportHistory.length"> ({{ reportHistory.length }})</span>
         </button>
-        <button class="btn btn-secondary btn-sm" @click="toggleFeedback">上次反馈<span v-if="reportContext"> ({{ (reportContext.open_tasks?.length||0) + (reportContext.meeting_actions?.length||0) }})</span></button>
+        <button class="btn btn-secondary btn-sm" @click="toggleFeedback">上次反馈<span v-if="reportContext"> ({{ (reportContext.open_tasks?.length||0) + (<div class="rf-section" v-if="reportContext.done_tasks?.length">
+            <div class="rf-label">Done Tasks ({{ reportContext.done_tasks.length }})</div>
+            <div class="rf-task" v-for="t in reportContext.done_tasks" :key="t.task_id">
+              <span class="rf-task-id mono">{{ t.task_id }}</span>
+              <span class="rf-task-title">{{ t.title }}</span>
+              <span class="tag tag-on-track">done</span>
+              <span v-if="t.source" class="tag tag-source">{{ t.source }}</span>
+            </div>
+          </div>
+          reportContext.meeting_actions?.length||0) }})</span></button>
         <button class="btn btn-secondary btn-sm" @click="toggleActions">会议行动<span v-if="myActions.length"> ({{ myActions.length }})</span></button>
       </div>
       <div class="report-toolbar-right">

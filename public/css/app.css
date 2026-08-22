@@ -1896,3 +1896,19 @@ body {
   border-color: var(--primary, #4a6fa5);
   box-shadow: 0 0 0 2px rgba(74,111,165,0.15);
 }
+
+/* Wave 8b: overdue + meeting action styles */
+.task-card.overdue, .task-card-enhanced.overdue {
+  border-left: 3px solid #ef4444 !important;
+  background: #fef2f2 !important;
+}
+.task-card.overdue .task-deadline, .task-card-enhanced.overdue .task-deadline {
+  color: #ef4444;
+  font-weight: bold;
+}
+tr.unmatched {
+  background: #fef9c3 !important;
+}
+tr.unmatched td {
+  border-bottom: 1px solid #fde68a;
+}

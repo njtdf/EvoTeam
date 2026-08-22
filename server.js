@@ -298,7 +298,7 @@ app.get('/api/summary/:id', requireAuth, (req, res) => {
 // 返回结构化上下文: 上次AI总结 + 会议行动项 + 未完成任务 + 飞轮最近事件 + 本体关联
 app.get('/api/report-context/:id', requireAuth, (req, res) => {
   const sid = req.params.id
-  const result = { student_id: sid, last_summary: null, meeting_actions: [], open_tasks: [], flywheel_recent: [], ontology_links: null }
+  const result = { student_id: sid, last_summary: null, meeting_actions: [], open_tasks: [], done_tasks: [], flywheel_recent: [], ontology_links: null }
 
   // 1. 上次 AI 总结
   try {
@@ -333,6 +333,10 @@ app.get('/api/report-context/:id', requireAuth, (req, res) => {
       task_id: t.task_id, title: t.title, status: t.status,
       deadline: t.deadline || null, priority: t.priority || 'medium',
       source: t.source || 'manual',
+    }))
+    result.done_tasks = tasks.filter(t => t.status === 'done').slice(-5).map(t => ({
+      task_id: t.task_id, title: t.title, priority: t.priority,
+      deadline: t.deadline || '', source: t.source || '',
     }))
   } catch {}
 
@@ -669,9 +673,11 @@ app.get('/api/kb/file', requireAuth, (req, res) => {
      return res.status(400).json({ error: 'Meeting content is empty' })
    }
    saveMeeting(date, content)
-   runExtraction(date).then(actions => {
+  runExtraction(date).then(async actions => {
     // Flywheel: meeting_ended -> index KB + log trajectory + build context
     flywheelTrigger('meeting_ended', { date, minutes: content, actions: actions?.actions || [], decisions: actions?.decisions || [] })
+    // Auto-extract promises for promise ledger
+    try { await autoExtractFromMeeting(date) } catch (pe) { console.error('[meeting] promise extract failed:', pe.message) }
   }).catch(e => {
      console.error('[meeting] extract failed:', e.message)
       saveActions(date, {
@@ -744,9 +750,9 @@ app.get('/api/kb/file', requireAuth, (req, res) => {
 
 // --- API: Kanban (Feature 3: 任务看板) ---
 app.get('/api/tasks', requireAuth, (req, res) => {
-  const tasks = req.user.role === 'teacher'
-    ? getAllTasks()
-    : getTasksByStudent(req.user.id)
+  const today = new Date().toISOString().slice(0, 10)
+  const tasks = (req.user.role === 'teacher' ? getAllTasks() : getTasksByStudent(req.user.id))
+    .map(t => ({ ...t, is_overdue: !!(t.deadline && t.deadline < today && t.status !== 'done') }))
   res.json({ tasks })
 })
 
@@ -800,8 +806,79 @@ app.post('/api/tasks/from-meeting', requireRole('teacher'), (req, res) => {
   if (!action) {
     return res.status(404).json({ error: 'Action item not found' })
   }
+  // Check if already promoted
+  const existing = getAllTasks().find(t => t.source_ref === task_id)
+  if (existing) {
+    return res.json({ ok: true, already_promoted: true, task: existing })
+  }
+  // Default deadline: today + 7 days
+  if (!action.deadline) {
+    const d = new Date(); d.setDate(d.getDate() + 7)
+    action.deadline = d.toISOString().slice(0, 10)
+  }
   const task = promoteMeetingAction(action)
   res.json({ ok: true, task })
+})
+
+// Bulk promote meeting actions to tasks
+app.post('/api/tasks/from-meeting/bulk', requireRole('teacher'), (req, res) => {
+  const { date, task_ids } = req.body
+  if (!date || !Array.isArray(task_ids)) {
+    return res.status(400).json({ error: 'date and task_ids[] required' })
+  }
+  const actions = loadActions(date)
+  if (!actions) {
+    return res.status(404).json({ error: 'No actions for this date' })
+  }
+  const created = [], failed = [], already = []
+  const d = new Date(); d.setDate(d.getDate() + 7)
+  const defaultDeadline = d.toISOString().slice(0, 10)
+  for (const tid of task_ids) {
+    const action = (actions.actions || []).find(a => a.task_id === tid)
+    if (!action) { failed.push({ task_id: tid, error: 'not found' }); continue }
+    const ex = getAllTasks().find(t => t.source_ref === tid)
+    if (ex) { already.push({ task_id: tid, task: ex }); continue }
+    if (!action.deadline) action.deadline = defaultDeadline
+    try {
+      const task = promoteMeetingAction(action)
+      created.push({ task_id: tid, task })
+    } catch (e) {
+      failed.push({ task_id: tid, error: e.message })
+    }
+  }
+  res.json({ ok: true, created, failed, already })
+})
+
+// Create task from weekly report risk
+app.post('/api/tasks/from-risk', requireRole('teacher'), (req, res) => {
+  const { student_id, risk_text } = req.body
+  if (!student_id || !risk_text) {
+    return res.status(400).json({ error: 'student_id and risk_text required' })
+  }
+  const d = new Date(); d.setDate(d.getDate() + 14)
+  const task = createTask({
+    title: (risk_text || '').slice(0, 200),
+    owner_student_id: student_id,
+    source: 'weekly_risk',
+    priority: 'high',
+    deadline: d.toISOString().slice(0, 10),
+  })
+  res.json({ ok: true, task })
+})
+
+// Batch set default deadlines for tasks without one
+app.post('/api/tasks/batch-deadline', requireRole('teacher'), (req, res) => {
+  const data = loadTasks()
+  const d = new Date(); d.setDate(d.getDate() + 7)
+  const defaultDeadline = d.toISOString().slice(0, 10)
+  let updated = 0
+  for (const t of data.tasks) {
+    if (!t.deadline && t.status !== 'done') {
+      updateTask(t.task_id, { deadline: defaultDeadline })
+      updated++
+    }
+  }
+  res.json({ ok: true, updated, default_deadline: defaultDeadline })
 })
 
 app.get('/api/board/stats', requireRole('teacher'), (req, res) => {
