@@ -21,6 +21,8 @@ createApp({
 
     // --- 会议 Tab 状态 ---
     const activeTab = ref('dashboard')
+    const sidebarCollapsed = ref(false)
+    function toggleSidebar() { sidebarCollapsed.value = !sidebarCollapsed.value }
     const meetings = ref([])
     const selectedMeetingDate = ref('')
     const selectedMeeting = ref(null)
@@ -1664,6 +1666,7 @@ function onChatMouseLeave() {
      switchToCockpit,
      // 总览
       dashboardData, loadingDashboard, briefGenerating,
+      sidebarCollapsed, toggleSidebar,
       switchToDashboard, loadDashboard, goToStudent, generateBrief,
       // 会议
       activeTab, meetings, selectedMeetingDate, selectedMeeting, meetingDate,

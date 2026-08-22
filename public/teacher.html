@@ -8,14 +8,16 @@
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<link rel="stylesheet" href="/css/app.css?v=07.29">
+<link rel="stylesheet" href="/css/app.css?v=07.30">
 </head>
 <body>
 <div id="app">
   <div class="app-container">
-    <aside class="sidebar">
+    <button class="sidebar-toggle" v-if="sidebarCollapsed" @click="toggleSidebar" title="Show sidebar">☰</button>
+    <aside class="sidebar" :class="{collapsed: sidebarCollapsed}">
     <div class="sidebar-header">
       <span class="sidebar-logo">AutoProf</span>
+      <button class="sidebar-collapse-btn" v-if="!sidebarCollapsed" @click="toggleSidebar" title="Collapse">◀</button>
     </div>
       <nav class="sidebar-nav">
         <div class="sidebar-nav-section">核心</div>
@@ -1814,7 +1816,7 @@
 
 
 
-<script src="/js/api.js?v=07.29"></script>
-<script src="/js/teacher.js?v=07.29"></script>
+<script src="/js/api.js?v=07.30"></script>
+<script src="/js/teacher.js?v=07.30"></script>
 </body>
 </html>

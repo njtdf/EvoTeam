@@ -23,6 +23,8 @@ createApp({
   const showHistory = ref(false)
   const historyViewReport = ref(null) // {raw, meta} or null
     // --- 看板 ---
+    const sidebarCollapsed = ref(false)
+    function toggleSidebar() { sidebarCollapsed.value = !sidebarCollapsed.value }
     const activeTab = ref('report')
     const tasks = ref([])
     const kanbanCols = [
@@ -838,7 +840,8 @@ function onChatMouseLeave() {
 }
     const globalChatMessages = ref([])
     const globalChatInput = ref('')
-    const globalChatAgentId: 'caio', globalChatStreaming = ref(false)
+    const globalChatAgentId = ref('caio')
+    const globalChatStreaming = ref(false)
     const globalChatEl = ref(null)
 
     async function sendGlobalChat() {
@@ -878,6 +881,7 @@ function onChatMouseLeave() {
     loadReportHistory, toggleHistory, viewHistoryReport, closeHistoryView, startNewReport,
     reportContext, showFeedback, loadReportContext, toggleFeedback,
       myActions, showActions, actionsLoading, toggleActions,
+      sidebarCollapsed, toggleSidebar,
       activeTab, tasks, kanbanCols, switchToKanban, loadMyTasks,
       myTasksByStatus, isOverdue, updateTaskStatus,
       // AI 工具箱
