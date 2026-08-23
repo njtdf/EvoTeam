@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs'
 
-const R = 'D:/OneDrive/7-SideWork/AutoProf/cordis-main'
+const R = 'D:/OneDrive/7-SideWork/AutoProf/EvoTeam'
 const html = readFileSync(`${R}/public/student.html`, 'utf-8')
 const js = readFileSync(`${R}/public/js/student.js`, 'utf-8')
 

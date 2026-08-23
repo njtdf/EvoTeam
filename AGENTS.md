@@ -16,7 +16,7 @@
 **已确认的失败模式**:
 - `node -e "...`...`"` → 反引号被 PowerShell 吞掉 → SyntaxError: Invalid or unexpected token
 - `powershell -Command "(... -replace 'old', 'new')"` → 引号嵌套爆炸 → ParserError
-- `apply_patch` 路径前缀重复(如 `cordis-main/public/js/api.js` → 实际变成 `cordis-main/cordis-main/public/js/api.js`)→ 用不带前缀的相对路径
+- `apply_patch` 路径前缀重复(如 `EvoTeam/public/js/api.js` → 实际变成 `EvoTeam/EvoTeam/public/js/api.js`)→ 用不带前缀的相对路径
 
 **可靠替代方案**:
 ```powershell
@@ -40,8 +40,8 @@ Remove-Item script.mjs
 ## 文档位置 (2026-08-21 追加)
 
  - **DEVLOG.md / CHANGELOG.md / MANUAL-VERIFICATION-GUIDE.md 只存放在 `D:\OneDrive\7-SideWork\AutoProf\` (父目录)**
- - cordis-main/ 内不保留这些文件的副本
- - 写 DEVLOG: 用 node 脚本 appendFileSync 到 `../DEVLOG.md` (相对于 cordis-main/)
+ - EvoTeam/ 内不保留这些文件的副本
+ - 写 DEVLOG: 用 node 脚本 appendFileSync 到 `../DEVLOG.md` (相对于 EvoTeam/)
  - 写 CHANGELOG: 用 node 脚本 writeFileSync 到 `../CHANGELOG.md`
  - git 追踪: 这些文件在 .gitignore 中 (父目录非 git 仓库)
 

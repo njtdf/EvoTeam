@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync, readdirSync } from 'fs'
 
-const R = 'D:/OneDrive/7-SideWork/AutoProf/cordis-main'
+const R = 'D:/OneDrive/7-SideWork/AutoProf/EvoTeam'
 const PARENT = 'D:/OneDrive/7-SideWork/AutoProf'
 const OLD = '0.7.19'
 const NEW = '0.7.20'

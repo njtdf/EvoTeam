@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-const root = 'D:/OneDrive/7-SideWork/AutoProf/cordis-main';
+const root = 'D:/OneDrive/7-SideWork/AutoProf/EvoTeam';
 
 const files = [
   'lib/db.js', 'lib/memory.js', 'lib/knowledge.js',

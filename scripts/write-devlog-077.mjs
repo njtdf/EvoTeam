@@ -65,12 +65,12 @@ const entry = `
 appendFileSync(devlogPath, entry, 'utf8')
 console.log('DEVLOG appended (' + entry.length + ' chars)')
 
-// Also sync to cordis-main/DEVLOG.md for git tracking
+// Also sync to EvoTeam/DEVLOG.md for git tracking
 const cordisDevlog = join(__dirname, '..', 'DEVLOG.md')
 try {
   const existing = readFileSync(cordisDevlog, 'utf8')
   appendFileSync(cordisDevlog, entry, 'utf8')
-  console.log('cordis-main/DEVLOG.md also synced')
+  console.log('EvoTeam/DEVLOG.md also synced')
 } catch(e) {
-  console.log('cordis-main/DEVLOG.md not found, skipping sync')
+  console.log('EvoTeam/DEVLOG.md not found, skipping sync')
 }

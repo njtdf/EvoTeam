@@ -1,5 +1,5 @@
 import fs from 'fs';
-const root = 'D:/OneDrive/7-SideWork/AutoProf/cordis-main';
+const root = 'D:/OneDrive/7-SideWork/AutoProf/EvoTeam';
 
 const serverJs = fs.readFileSync(root + '/server.js', 'utf8');
 

@@ -35,7 +35,7 @@ for (const f of files) {
 
   if (existsSync(cordisPath)) {
     unlinkSync(cordisPath)
-    console.log(f + ': deleted from cordis-main/')
+    console.log(f + ': deleted from EvoTeam/')
   }
 }
 
