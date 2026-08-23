@@ -129,19 +129,28 @@ status: "on_track"
     }
 
     async function generateDraft() {
-      draftLoading.value = true
-      try {
-        const data = await api(`/api/progress/${user.value.id}/draft`)
-        if (data.draft) {
-          markdown.value = data.draft
-          updatePreview()
-          if (data.source === 'no_history') showToast('未找到 Codex 历史，使用模板。')
-          else if (data.source === 'no_api_key') showToast('未配置 API key，使用模板。')
-          else showToast(`AI 草稿已生成（基于 ${data.excerpts_found} 条 Codex 历史）`)
+          draftLoading.value = true
+          let draftText = ""
+          try {
+            await streamChat('/api/agent/report-draft', {},
+              (chunk) => { draftText += chunk },
+              () => {
+                // Extract markdown content from response
+                const mdMatch = draftText.match(/```markdown\n([\s\S]*?)```/)
+                if (mdMatch) draftText = mdMatch[1].trim()
+                else {
+                  const fmMatch = draftText.match(/---[\s\S]*?---[\s\S]*/)
+                  if (fmMatch) draftText = fmMatch[0].trim()
+                }
+                markdown.value = draftText
+                updatePreview()
+                showToast('AI Agent draft generated (using tasks+meetings+summary context)')
+              },
+              (err) => { showToast('AI draft failed: ' + err) }
+            )
+          } catch (e) { showToast('Draft generation failed: ' + e.message) }
+          finally { draftLoading.value = false }
         }
-      } catch (e) { showToast('Draft generation failed: ' + e.message) }
-      finally { draftLoading.value = false }
-    }
 
     function startPollingSummary(studentId) {
       summaryLoading.value = true

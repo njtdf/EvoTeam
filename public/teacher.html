@@ -8,7 +8,7 @@
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<link rel="stylesheet" href="/css/app.css?v=07.31">
+<link rel="stylesheet" href="/css/app.css?v=07.32">
 </head>
 <body>
 <div id="app">
@@ -232,6 +232,7 @@
       <div class="pane-right">
         <div v-if="summary" class="card">
           <div class="card-title">📊 AI 总结</div>
+          <button class="btn btn-sm btn-primary" @click="runAgentReview" :disabled="agentReviewLoading" style="float:right;font-size:11px;padding:2px 8px">{{ agentReviewLoading ? "AI 审阅中..." : "🤖 AI 审阅" }}</button>
           <div class="summary-section">
             <div class="summary-label">总结</div>
             <div class="summary-content">{{ summary.summary }}</div>
@@ -245,7 +246,11 @@
             <ul class="summary-suggestions"><li v-for="s in summary.suggestions" :key="s">{{ s }}</li></ul>
           </div>
         </div>
-        <div v-if="report" class="card">
+        <div v-if="agentReviewText" class="card" style="border-left:3px solid var(--primary)">
+                  <div class="card-title">🤖 AI 审阅意见</div>
+                  <div class="md-preview" v-html="formatMessage(agentReviewText)" style="border:none;padding:0"></div>
+                </div>
+                <div v-if="report" class="card">
           <div class="card-title">
             {{ report.meta.name }} - {{ report.meta.project }}
             <span class="tag" :class="'tag-' + (report.meta.status || 'on_track').replace('_','-')">
@@ -1816,7 +1821,7 @@
 
 
 
-<script src="/js/api.js?v=07.31"></script>
-<script src="/js/teacher.js?v=07.31"></script>
+<script src="/js/api.js?v=07.32"></script>
+<script src="/js/teacher.js?v=07.32"></script>
 </body>
 </html>

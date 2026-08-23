@@ -10,6 +10,8 @@ createApp({
     const chatMessages = ref([])
     const chatInput = ref('')
     const chatStreaming = ref(false)
+   const agentReviewText = ref('')
+   const agentReviewLoading = ref(false)
    const loadingReport = ref(false)
    const reportContext = ref(null)
   const chatMessagesEl = ref(null)
@@ -164,7 +166,21 @@ createApp({
       } catch (e) { console.error('report-context:', e.message) }
     }
 
-    async function sendChat() {
+    async function runAgentReview() {
+          if (!selectedStudentId.value) { showToast('Please select a student first'); return }
+          agentReviewLoading.value = true
+          agentReviewText.value = ''
+          let reviewText = ''
+          try {
+            await streamChat('/api/agent/report-review', { student_id: selectedStudentId.value },
+              (chunk) => { reviewText += chunk; agentReviewText.value = reviewText },
+              () => { agentReviewLoading.value = false },
+              (err) => { showToast('AI review failed: ' + err); agentReviewLoading.value = false },
+            )
+          } catch (e) { showToast('Review failed: ' + e.message); agentReviewLoading.value = false }
+        }
+    
+        async function sendChat() {
       const msg = chatInput.value.trim()
       if (!msg || chatStreaming.value) return
       chatInput.value = ''
@@ -1672,6 +1688,7 @@ function onChatMouseLeave() {
      // 总览
       dashboardData, loadingDashboard, briefGenerating,
       sidebarCollapsed, toggleSidebar,
+      agentReviewText, agentReviewLoading, runAgentReview,
       switchToDashboard, loadDashboard, goToStudent, generateBrief,
       // 会议
       activeTab, meetings, selectedMeetingDate, selectedMeeting, meetingDate,
