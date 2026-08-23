@@ -1473,6 +1473,25 @@ app.get('/api/news', requireAuth, async (req, res) => {
 app.get('/api/calendar/events', requireAuth, (req, res) => {
   try {
     const events = loadCalendarEvents()
+    // Merge task deadlines as calendar events (filter by student for non-teacher)
+    try {
+      const allTasks = getAllTasks()
+      const tasks = req.user.role === 'teacher' ? allTasks : allTasks.filter(t => t.owner_student_id === req.user.id)
+      const today = new Date().toISOString().slice(0, 10)
+      for (const t of tasks) {
+        if (t.deadline && t.status !== 'done') {
+          events.push({
+            date: t.deadline,
+            title: 'Task: ' + (t.title || '').slice(0, 50),
+            type: 'task_deadline',
+            task_id: t.task_id,
+            student_id: t.owner_student_id || '',
+            priority: t.priority || 'medium',
+            overdue: t.deadline < today,
+          })
+        }
+      }
+    } catch (e) { console.error('[calendar] task merge error:', e.message) }
     res.json(events)
   } catch (e) {
     res.json([])
