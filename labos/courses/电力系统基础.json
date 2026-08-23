@@ -407,5 +407,126 @@
       "desc": "卷面答题，全课程内容"
     }
   ],
-  "current_week": 1
+  "current_week": 1,
+  "obe_matrix": {
+    "indicators": [
+      {
+        "grad_req": "1-3",
+        "indicator_desc": "能够将专业知识和数学模型方法用于电气系统的规划、设计、运行和控制问题。",
+        "objective_id": 1,
+        "chapters": [
+          1,
+          2,
+          3,
+          6,
+          8
+        ],
+        "teaching_design": "通过理论教学讲解电力系统的概念、组成、各元件的数学模型、潮流计算、负荷计算、短路计算的基本模型和方法。",
+        "evaluation_method": "考核成绩评价法",
+        "evaluation_basis": [
+          "课堂随测或书面作业",
+          "期中考试",
+          "期末考试"
+        ],
+        "assessment_weights": [
+          {
+            "item": "平时成绩",
+            "weight": 0.2
+          },
+          {
+            "item": "期中考试",
+            "weight": 0.4
+          },
+          {
+            "item": "期末考试",
+            "weight": 0.4
+          }
+        ],
+        "objective_weight": 1
+      },
+      {
+        "grad_req": "2-2",
+        "indicator_desc": "能运用电气工程学科的知识，对复杂工程问题进行正确表达和数学模型建立。",
+        "objective_id": 2,
+        "chapters": [
+          3,
+          4,
+          5,
+          6,
+          8
+        ],
+        "teaching_design": "通过理论教学讲解电力系统的复杂网络潮流计算、调频、调压的基本方法；通过案例分析与设计完成负荷计算和短路计算基本方法的教学。",
+        "evaluation_method": "考核成绩评价法 + 量规表法",
+        "evaluation_basis": [
+          "课堂随测或书面作业",
+          "期中考试",
+          "期末考试",
+          "设计报告"
+        ],
+        "assessment_weights": [
+          {
+            "item": "期中考试",
+            "weight": 0.4
+          },
+          {
+            "item": "期末考试",
+            "weight": 0.4
+          },
+          {
+            "item": "课程设计",
+            "weight": 0.2
+          }
+        ],
+        "objective_weight": 1
+      },
+      {
+        "grad_req": "4-4",
+        "indicator_desc": "针对电气工程相关领域复杂工程问题的实验研究，能对实验结果进行分析与解释，获取合理有效的结论。",
+        "objective_id": 3,
+        "chapters": [
+          4,
+          5,
+          8,
+          9
+        ],
+        "teaching_design": "通过理论教学讲解和计算机仿真完成电力系统调频、调压方法及手段的研究；通过案例分析与设计完成实用短路电流计算及设备选择与校验的工程训练。",
+        "evaluation_method": "量规表法",
+        "evaluation_basis": [
+          "设计报告"
+        ],
+        "assessment_weights": [
+          {
+            "item": "课程设计",
+            "weight": 1
+          }
+        ],
+        "objective_weight": 1
+      },
+      {
+        "grad_req": "11-3",
+        "indicator_desc": "能够将工程管理原理、技术经济方法应用于开发电气产品、设计电气方案和优化运行系统。",
+        "objective_id": 4,
+        "chapters": [
+          7,
+          9
+        ],
+        "teaching_design": "通过案例分析与设计完成实用短路电流计算设备选择与校验方法的教学。",
+        "evaluation_method": "量规表法",
+        "evaluation_basis": [
+          "设计报告"
+        ],
+        "assessment_weights": [
+          {
+            "item": "课程设计",
+            "weight": 1
+          }
+        ],
+        "objective_weight": 1
+      }
+    ],
+    "ideology": [
+      "课程目标1：本课程在介绍电力系统课程内涵的同时，着重强调我国在电力系统相关领域的科技水平及其在国际上的领先优势，增强学生科技自信、文化自信、民族自信。",
+      "课程目标4：在课程设计环节，向学生传达自主研发、自主设计的重要性，号召同学们为推动我国从\"电力大国\"走向\"电力强国\"而努力奋斗。"
+    ]
+  }
 }

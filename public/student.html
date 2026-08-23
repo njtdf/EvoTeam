@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EvoTeam - Student</title>
-<link rel="stylesheet" href="/css/app.css?v=07.32">
+<link rel="stylesheet" href="/css/app.css?v=0.8.0">
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -555,6 +555,7 @@
         <button class="course-subtab" :class="{active:courseSubTab==='chapters'}" @click="courseSubTab='chapters'">章节内容</button>
         <button class="course-subtab" :class="{active:courseSubTab==='assessment'}" @click="courseSubTab='assessment'">考核方式</button>
         <button class="course-subtab" :class="{active:courseSubTab==='resources'}" @click="courseSubTab='resources'">学习资源</button>
+        <button class="course-subtab" :class="{active:courseSubTab==='obe'}" @click="courseSubTab='obe'">OBE达成度</button>
       </div>
 
       <div v-if="courseSubTab==='schedule'" class="course-schedule-list">
@@ -623,7 +624,36 @@
         </div>
       </div>
     </div>
-    <div v-else class="empty-state">未找到课程数据</div>
+
+      <!-- OBE Matrix Tab -->
+      <div v-if="courseSubTab==='obe'" class="course-obe-view">
+        <h3 style="margin:0 0 8px">OBE 达成度矩阵</h3>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">课程目标与毕业要求指标点的支撑关系及考核权重分配</p>
+        <table class="course-assessment-table">
+          <thead>
+            <tr><th>毕业要求</th><th>课程目标</th><th>支撑章节</th><th>评价方法</th><th>评价依据</th><th>考核权重</th><th>目标权重</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="ind in (courseData.obe_matrix && courseData.obe_matrix.indicators) || []" :key="ind.grad_req">
+              <td><strong>{{ ind.grad_req }}</strong><div style="font-size:11px;color:var(--text-muted);max-width:180px">{{ ind.indicator_desc }}</div></td>
+              <td>目标{{ ind.objective_id }}</td>
+              <td>第{{ ind.chapters.join(',') }}章</td>
+              <td>{{ ind.evaluation_method }}</td>
+              <td><span v-for="b in ind.evaluation_basis" :key="b" class="stat-pill" style="font-size:11px;margin:2px;display:inline-block">{{ b }}</span></td>
+              <td><div v-for="w in ind.assessment_weights" :key="w.item" style="font-size:12px;margin:2px 0">{{ w.item }}: {{ (w.weight * 100).toFixed(0) }}%</div></td>
+              <td>{{ (ind.objective_weight * 100).toFixed(0) }}%</td>
+            </tr>
+          </tbody>
+        </table>
+        <div v-if="courseData.obe_matrix && courseData.obe_matrix.ideology && courseData.obe_matrix.ideology.length" style="margin-top:20px">
+          <h4>课程思政元素</h4>
+          <ul class="summary-risks">
+            <li v-for="(it, i) in courseData.obe_matrix.ideology" :key="i" style="margin:8px 0;font-size:13px">{{ it }}</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+        <div v-else class="empty-state">未找到课程数据</div>
   </div>
 
 
@@ -711,7 +741,7 @@
     </main>
   </div>
 </div>
-<script src="/js/api.js?v=07.32"></script>
-<script src="/js/student.js?v=07.32"></script>
+<script src="/js/api.js?v=0.8.0"></script>
+<script src="/js/student.js?v=0.8.0"></script>
 </body>
 </html>

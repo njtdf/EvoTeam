@@ -8,7 +8,7 @@
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<link rel="stylesheet" href="/css/app.css?v=07.32">
+<link rel="stylesheet" href="/css/app.css?v=0.8.0">
 </head>
 <body>
 <div id="app">
@@ -87,7 +87,7 @@
         <div class="promise-item" :class="'urgency-' + p.urgency" v-for="p in overduePromises" :key="p.promise_id">
           <div class="promise-promise-text">{{ p.promise }}</div>
           <div class="promise-meta">
-            <span>{{ p.promiser_name || 'Unmatched' }}</span>
+            <span>{{ p.promiser_name || '未匹配' }}</span>
             <span v-if="p.deadline">截止: {{ p.deadline }}</span>
             <span class="promise-badge" :class="p.status">{{ p.status }}</span>
             <button @click="fulfillPromiseAction(p.promise_id)" style="margin-left:auto;padding:2px 8px;font-size:11px;border:1px solid #d1d5db;border-radius:4px;background:white;cursor:pointer">✓ 兑现</button>
@@ -100,7 +100,7 @@
           <div class="promise-item" :class="'urgency-' + p.urgency" v-for="p in upcomingPromises" :key="p.promise_id">
             <div class="promise-promise-text">{{ p.promise }}</div>
             <div class="promise-meta">
-              <span>{{ p.promiser_name || 'Unmatched' }}</span>
+              <span>{{ p.promiser_name || '未匹配' }}</span>
               <span v-if="p.deadline">截止: {{ p.deadline }}</span>
               <button @click="fulfillPromiseAction(p.promise_id)" style="margin-left:auto;padding:2px 8px;font-size:11px;border:1px solid #d1d5db;border-radius:4px;background:white;cursor:pointer">✓ 兑现</button>
             </div>
@@ -348,7 +348,7 @@
           <div class="summary-label">决议</div>
           <ul class="summary-risks"><li v-for="(d,i) in selectedMeeting.actions.decisions" :key="i">{{ d }}</li></ul>
         </div>
-        <div style="margin:8px 0;display:flex;gap:8px;align-items:center"><button class="btn btn-primary btn-sm" @click="bulkPromoteMeeting(selectedMeetingDate)" v-if="selectedMeeting.actions && selectedMeeting.actions.actions && selectedMeeting.actions.actions.length">Promote All to Tasks</button><span class="text-muted" style="font-size:12px">Only assigned actions will be promoted</span></div>
+        <div style="margin:8px 0;display:flex;gap:8px;align-items:center"><button class="btn btn-primary btn-sm" @click="bulkPromoteMeeting(selectedMeetingDate)" v-if="selectedMeeting.actions && selectedMeeting.actions.actions && selectedMeeting.actions.actions.length">全部提升为任务</button><span class="text-muted" style="font-size:12px">仅指派负责人的行动项会被提升</span></div>
         <table class="actions-table" v-if="selectedMeeting.actions && selectedMeeting.actions.actions && selectedMeeting.actions.actions.length">
           <thead>
             <tr><th>ID</th><th>任务</th><th>负责人</th><th>截止</th><th>状态</th><th>看板</th></tr>
@@ -373,7 +373,7 @@
                 </select>
               </td>
               <td>
-                <span v-if="isActionPromoted(a.task_id)" class="tag tag-on-track" style="font-size:11px">Promoted</span>
+                <span v-if="isActionPromoted(a.task_id)" class="tag tag-on-track" style="font-size:11px">已提升</span>
                 <button v-else class="btn btn-sm btn-secondary" @click="promoteToKanban(selectedMeetingDate, a.task_id)">→任务</button>
               </td>
             </tr>
@@ -1658,6 +1658,7 @@
         <button class="course-subtab" :class="{active:courseSubTab==='chapters'}" @click="courseSubTab='chapters'">章节内容</button>
         <button class="course-subtab" :class="{active:courseSubTab==='assessment'}" @click="courseSubTab='assessment'">考核方式</button>
         <button class="course-subtab" :class="{active:courseSubTab==='resources'}" @click="courseSubTab='resources'">学习资源</button>
+        <button class="course-subtab" :class="{active:courseSubTab==='obe'}" @click="courseSubTab='obe'">OBE达成度</button>
       </div>
 
       <!-- Schedule Tab -->
@@ -1735,7 +1736,36 @@
         </div>
       </div>
     </div>
-    <div v-else class="empty-state">未找到课程数据</div>
+
+      <!-- OBE Matrix Tab -->
+      <div v-if="courseSubTab==='obe'" class="course-obe-view">
+        <h3 style="margin:0 0 8px">OBE 达成度矩阵</h3>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">课程目标与毕业要求指标点的支撑关系及考核权重分配</p>
+        <table class="course-assessment-table">
+          <thead>
+            <tr><th>毕业要求</th><th>课程目标</th><th>支撑章节</th><th>评价方法</th><th>评价依据</th><th>考核权重</th><th>目标权重</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="ind in (courseData.obe_matrix && courseData.obe_matrix.indicators) || []" :key="ind.grad_req">
+              <td><strong>{{ ind.grad_req }}</strong><div style="font-size:11px;color:var(--text-muted);max-width:180px">{{ ind.indicator_desc }}</div></td>
+              <td>目标{{ ind.objective_id }}</td>
+              <td>第{{ ind.chapters.join(',') }}章</td>
+              <td>{{ ind.evaluation_method }}</td>
+              <td><span v-for="b in ind.evaluation_basis" :key="b" class="stat-pill" style="font-size:11px;margin:2px;display:inline-block">{{ b }}</span></td>
+              <td><div v-for="w in ind.assessment_weights" :key="w.item" style="font-size:12px;margin:2px 0">{{ w.item }}: {{ (w.weight * 100).toFixed(0) }}%</div></td>
+              <td>{{ (ind.objective_weight * 100).toFixed(0) }}%</td>
+            </tr>
+          </tbody>
+        </table>
+        <div v-if="courseData.obe_matrix && courseData.obe_matrix.ideology && courseData.obe_matrix.ideology.length" style="margin-top:20px">
+          <h4>课程思政元素</h4>
+          <ul class="summary-risks">
+            <li v-for="(it, i) in courseData.obe_matrix.ideology" :key="i" style="margin:8px 0;font-size:13px">{{ it }}</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+        <div v-else class="empty-state">未找到课程数据</div>
   </div>
 
 
@@ -1821,7 +1851,7 @@
 
 
 
-<script src="/js/api.js?v=07.32"></script>
-<script src="/js/teacher.js?v=07.32"></script>
+<script src="/js/api.js?v=0.8.0"></script>
+<script src="/js/teacher.js?v=0.8.0"></script>
 </body>
 </html>
