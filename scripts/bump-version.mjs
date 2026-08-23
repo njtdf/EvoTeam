@@ -1,32 +1,40 @@
-import { readFileSync, writeFileSync, readdirSync } from 'fs'
+import { readFileSync, writeFileSync } from 'fs'
 
-const R = 'D:/OneDrive/7-SideWork/AutoProf/EvoTeam'
-const PARENT = 'D:/OneDrive/7-SideWork/AutoProf'
-const OLD = '0.7.19'
-const NEW = '0.7.20'
-const OLD_V = '0719'
-const NEW_V = '0720'
+const base = 'D:/OneDrive/7-SideWork/AutoProf/EvoTeam'
+const oldV = '0.7.30'
+const newV = '0.7.31'
+const oldQ = '07.30'
+const newQ = '07.31'
 
-// VERSION file
-writeFileSync(`${PARENT}/VERSION`, NEW + '\n')
-console.log('VERSION:', NEW)
+// 1. VERSION file (in parent dir)
+writeFileSync('D:/OneDrive/7-SideWork/AutoProf/VERSION', newV + '\n', 'utf8')
+console.log('1. VERSION file updated')
 
-// api.js APP_VERSION
-let api = readFileSync(`${R}/public/js/api.js`, 'utf-8')
-api = api.replace(`APP_VERSION = '${OLD}'`, `APP_VERSION = '${NEW}'`)
-api = api.replace(`APP_VERSION = "${OLD}"`, `APP_VERSION = "${NEW}"`)
-writeFileSync(`${R}/public/js/api.js`, api, 'utf-8')
-console.log('api.js: APP_VERSION =', NEW)
+// 2. api.js APP_VERSION
+const apiJs = readFileSync(base + '/public/js/api.js', 'utf8')
+writeFileSync(base + '/public/js/api.js', apiJs.replace(`const APP_VERSION = '${oldV}'`, `const APP_VERSION = '${newV}'`), 'utf8')
+console.log('2. api.js APP_VERSION updated')
 
-// All HTML files: ?v=0719 -> ?v=0720
-const htmlFiles = readdirSync(`${R}/public`).filter(f => f.endsWith('.html'))
-for (const f of htmlFiles) {
-  const p = `${R}/public/${f}`
-  let t = readFileSync(p, 'utf-8')
-  const before = (t.match(new RegExp(OLD_V, 'g')) || []).length
-  t = t.split(OLD_V).join(NEW_V)
-  writeFileSync(p, t, 'utf-8')
-  console.log(`${f}: ${before} replacements`)
+// 3. teacher.html cache-bust
+const th = readFileSync(base + '/public/teacher.html', 'utf8')
+writeFileSync(base + '/public/teacher.html', th.replaceAll(`?v=${oldQ}`, `?v=${newQ}`), 'utf8')
+console.log('3. teacher.html cache-bust updated')
+
+// 4. student.html cache-bust
+const sh = readFileSync(base + '/public/student.html', 'utf8')
+writeFileSync(base + '/public/student.html', sh.replaceAll(`?v=${oldQ}`, `?v=${newQ}`), 'utf8')
+console.log('4. student.html cache-bust updated')
+
+// 5. server.js VERSION constant
+const srv = readFileSync(base + '/server.js', 'utf8')
+const updated = srv.replace(/const VERSION = ['"]0\.7\.30['"]/, `const VERSION = '${newV}'`)
+if (updated !== srv) {
+  writeFileSync(base + '/server.js', updated, 'utf8')
+  console.log('5. server.js VERSION updated')
+} else {
+  console.log('5. server.js VERSION pattern not found - checking...')
+  const idx = srv.indexOf('VERSION')
+  console.log('   context:', srv.substring(idx, idx + 80))
 }
 
-console.log('\nVersion bumped to', NEW)
+console.log('Version bump complete: ' + oldV + ' -> ' + newV)

@@ -128,7 +128,12 @@ createApp({
     })
 
    // ===== 周报 Tab =====
-    async function switchToCockpit() { activeTab.value = 'cockpit'; window.location.hash = 'cockpit'; if (students.value.length === 0) await loadStudents() }
+    async function switchToCockpit() {
+      activeTab.value = 'cockpit'
+      window.location.hash = 'cockpit'
+      if (students.value.length === 0) await loadStudents()
+      if (!dashboardData.value) await loadDashboard()
+    }
 
     async function loadStudents() {
       try {
