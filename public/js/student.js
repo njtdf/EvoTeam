@@ -368,7 +368,10 @@ status: "on_track"
             showToast('AI 错误: ' + err)
             assistantStreaming.value = false
           },
-          (toolName, args) => { if (!assistantMessages.value[assistantMessages.value.length - 1].toolCalls) assistantMessages.value[assistantMessages.value.length - 1].toolCalls = []; assistantMessages.value[assistantMessages.value.length - 1].toolCalls.push({ name: toolName, args }) }
+          (toolName, args) => {
+            const last = assistantMessages.value[assistantMessages.value.length - 1]
+            if (!last.toolCalls) last.toolCalls = []
+            last.toolCalls.push({ name: toolName, args })
           }
         )
       } catch (e) {

@@ -1673,6 +1673,16 @@ function onChatMouseLeave() {
     }
 
 
+    const toolLabels = {
+      read_last_report: '读取周报',
+      read_student_summary: '读取AI总结',
+      read_student_tasks: '查询任务',
+      read_report_context: '读取飞轮上下文',
+      search_knowledge_base: '搜索知识库',
+      read_all_students_status: '获取全组概览',
+      read_student_report: '读取学生周报',
+    }
+
     return {
       // Daily Brief + Goal Tree + Ideas
       dailyBrief, goalTree, ideaList, ideaInput, ideaStreaming, ideaStreamText,
