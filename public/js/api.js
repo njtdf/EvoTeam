@@ -1,7 +1,7 @@
 // api.js - Shared API client for AutoProf frontend
 
 // Version auto-reload: detects stale cached JS and forces reload
-const APP_VERSION = '0.8.1'
+const APP_VERSION = '0.8.2'
 
 async function checkVersion() {
   try {
@@ -39,7 +39,7 @@ async function api(path, options = {}) {
 }
 
 // SSE stream reader for chat
-async function streamChat(url, body, onChunk, onDone, onError) {
+async function streamChat(url, body, onChunk, onDone, onError, onTool) {
   try {
     const resp = await fetch(url, {
       method: 'POST',
@@ -72,6 +72,7 @@ async function streamChat(url, body, onChunk, onDone, onError) {
           const msg = JSON.parse(payload)
           const text = msg.chunk || msg.content
           if (text) onChunk(text)
+          if (msg.tool && onTool) onTool(msg.tool, msg.args)
           if (msg.done) onDone()
           if (msg.error) onError(msg.error)
         } catch {}

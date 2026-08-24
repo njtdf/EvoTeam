@@ -193,6 +193,7 @@ createApp({
         (chunk) => { chatMessages.value[aiIdx].content += chunk; nextTick(scrollChatToBottom) },
         () => { chatStreaming.value = false },
         (err) => { chatMessages.value[aiIdx].content += `\n[Error: ${err}]`; chatStreaming.value = false },
+      (toolName, args) => { if (!chatMessages.value[aiIdx].toolCalls) chatMessages.value[aiIdx].toolCalls = []; chatMessages.value[aiIdx].toolCalls.push({ name: toolName, args }); nextTick(scrollChatToBottom) }
       )
     }
 
@@ -1656,6 +1657,12 @@ function onChatMouseLeave() {
         }, () => {
           const last = globalChatMessages.value[globalChatMessages.value.length - 1]
           if (last && last._streaming) delete last._streaming
+        }, (err) => {
+          globalChatMessages.value.push({ role: 'assistant', content: 'Error: ' + err.message })
+        }, (toolName, args) => {
+          const last = globalChatMessages.value[globalChatMessages.value.length - 1]
+          if (!last.toolCalls) last.toolCalls = []
+          last.toolCalls.push({ name: toolName, args })
         })
       } catch (e) {
         globalChatMessages.value.push({ role: 'assistant', content: 'Error: ' + e.message })
@@ -1689,6 +1696,7 @@ function onChatMouseLeave() {
       dashboardData, loadingDashboard, briefGenerating,
       sidebarCollapsed, toggleSidebar,
       agentReviewText, agentReviewLoading, runAgentReview,
+      toolLabels,
       switchToDashboard, loadDashboard, goToStudent, generateBrief,
       // 会议
       activeTab, meetings, selectedMeetingDate, selectedMeeting, meetingDate,

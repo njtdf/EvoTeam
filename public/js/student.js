@@ -296,6 +296,15 @@ status: "on_track"
     }
 
     // ===== AI 助手 (学生与 AI 聊天, SSE) =====
+        const toolLabels = {
+      read_last_report: '读取周报',
+      read_student_summary: '读取AI总结',
+      read_student_tasks: '查询任务',
+      read_report_context: '读取飞轮上下文',
+      search_knowledge_base: '搜索知识库',
+      read_all_students_status: '获取全组概览',
+      read_student_report: '读取学生周报',
+    }
     const assistantMessages = ref([])
     const assistantInput = ref('')
     const assistantStreaming = ref(false)
@@ -358,6 +367,8 @@ status: "on_track"
           (err) => {
             showToast('AI 错误: ' + err)
             assistantStreaming.value = false
+          },
+          (toolName, args) => { if (!assistantMessages.value[assistantMessages.value.length - 1].toolCalls) assistantMessages.value[assistantMessages.value.length - 1].toolCalls = []; assistantMessages.value[assistantMessages.value.length - 1].toolCalls.push({ name: toolName, args }) }
           }
         )
       } catch (e) {
@@ -869,6 +880,12 @@ function onChatMouseLeave() {
         }, () => {
           const last = globalChatMessages.value[globalChatMessages.value.length - 1]
           if (last && last._streaming) delete last._streaming
+        }, (err) => {
+          globalChatMessages.value.push({ role: 'assistant', content: 'Error: ' + err.message })
+        }, (toolName, args) => {
+          const last = globalChatMessages.value[globalChatMessages.value.length - 1]
+          if (!last.toolCalls) last.toolCalls = []
+          last.toolCalls.push({ name: toolName, args })
         })
       } catch (e) {
         globalChatMessages.value.push({ role: 'assistant', content: 'Error: ' + e.message })
@@ -912,6 +929,7 @@ function onChatMouseLeave() {
       // AI 助手
       assistantMessages, assistantInput, assistantStreaming,
       sendAssistantMessage, switchToAssistant, mySummary, myReportHtml,
+      toolLabels,
       // 知识库
       kbFiles, kbSearch, kbLoading, kbFilteredFiles,
       kbViewingFile, kbViewingFileName, kbFileContent, kbSemQuery, kbSemResults, kbSemLoading, kbSemStats, semSearchKb, loadKbStats,

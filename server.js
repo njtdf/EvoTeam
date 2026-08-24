@@ -129,6 +129,136 @@ function getLatestReport(config, studentId) {
   return files[files.length - 1] // latest (sorted ascending)
 }
 
+// --- Agent Tool Factories (shared by /api/chat, /api/global-chat, /api/agent/*) ---
+function buildReportTools(studentId, config) {
+  return {
+    read_last_report: {
+      description: "Read the student latest weekly report content",
+      parameters: { type: "object", properties: {} },
+      execute: async () => {
+        const fp = getLatestReport(config, studentId)
+        if (!fp) return "No previous report found."
+        const rep = parseReport(fp)
+        const body = (rep.raw || "").replace(/^[\s\S]*?---/, "").trim()
+        return body.slice(0, 3000)
+      }
+    },
+    read_student_summary: {
+      description: "Read the AI-generated summary, risks, and suggestions for this student",
+      parameters: { type: "object", properties: {} },
+      execute: async () => {
+        const sum = loadSummary(studentId)
+        if (!sum) return "No AI summary available."
+        return JSON.stringify({ summary: sum.summary, risks: sum.risks, suggestions: sum.suggestions })
+      }
+    },
+    read_student_tasks: {
+      description: "Read all tasks assigned to this student",
+      parameters: { type: "object", properties: {} },
+      execute: async () => {
+        const tasks = getTasksByStudent(studentId)
+        return JSON.stringify(tasks.map(t => ({ task_id: t.task_id, title: t.title, status: t.status, deadline: t.deadline, priority: t.priority, source: t.source })))
+      }
+    },
+    read_report_context: {
+      description: "Read student open tasks, meeting action items, and last AI summary",
+      parameters: { type: "object", properties: {} },
+      execute: async () => {
+        const result = { open_tasks: [], done_tasks: [], meeting_actions: [], last_summary: "" }
+        try { const sum = loadSummary(studentId); if (sum) result.last_summary = sum.summary || "" } catch {}
+        try {
+          const tasks = getTasksByStudent(studentId)
+          result.open_tasks = tasks.filter(t => t.status !== "done").map(t => ({ title: t.title, deadline: t.deadline, priority: t.priority }))
+          result.done_tasks = tasks.filter(t => t.status === "done").slice(-5).map(t => ({ title: t.title, source: t.source }))
+        } catch {}
+        try {
+          for (const m of listMeetings()) {
+            const a = loadActions(m.date)
+            if (!a || !a.actions) continue
+            for (const act of a.actions) {
+              if (act.owner_student_id === studentId || act.owner_name === studentId) {
+                result.meeting_actions.push({ task: act.task, deadline: act.deadline, status: act.status })
+              }
+            }
+          }
+        } catch {}
+        return JSON.stringify(result)
+      }
+    },
+    search_knowledge_base: {
+      description: "Search the lab knowledge base (weekly reports, meeting minutes, summaries) by keyword",
+      parameters: { type: "object", properties: { query: { type: "string", description: "Search query" } }, required: ["query"] },
+      execute: async (args) => {
+        try { const results = searchKnowledge(args.query, 5); return JSON.stringify(results.map(r => ({ title: r.title, snippet: r.snippet, score: r.score }))) }
+        catch (e) { return "KB search error: " + e.message }
+      }
+    }
+  }
+}
+
+function buildTeacherOverviewTools(config) {
+  return {
+    read_all_students_status: {
+      description: "Read overview of all students: report status, open tasks, overdue, last summary",
+      parameters: { type: "object", properties: {} },
+      execute: async () => {
+        const allStudents = loadStudents().filter(s => s.role !== "teacher")
+        const allTasks = getAllTasks()
+        const today = new Date().toISOString().slice(0, 10)
+        let lines = []
+        for (const s of allStudents) {
+          const reportPath = getLatestReport(config, s.id)
+          const summ = loadSummary(s.id)
+          const sTasks = allTasks.filter(t => t.owner_student_id === s.id)
+          const open = sTasks.filter(t => t.status === "todo" || t.status === "in_progress").length
+          const overdue = sTasks.filter(t => t.deadline && t.deadline < today && t.status !== "done").length
+          lines.push(`${s.id} ${s.name} [${s.project || ""}] report:${reportPath ? "submitted" : "missing"} open_tasks:${open} overdue:${overdue}`)
+          if (summ && summ.summary) lines.push(`  summary: ${summ.summary}`)
+          if (summ && summ.risks && summ.risks.length) lines.push(`  risks: ${summ.risks.join("; ")}`)
+        }
+        return lines.join("\n")
+      }
+    },
+    read_student_report: {
+      description: "Read a specific student latest weekly report",
+      parameters: { type: "object", properties: { student_id: { type: "string" } }, required: ["student_id"] },
+      execute: async (args) => {
+        const fp = getLatestReport(config, args.student_id)
+        if (!fp) return "No report found."
+        const rep = parseReport(fp)
+        const body = (rep.raw || "").replace(/^[\s\S]*?---/, "").trim()
+        return body.slice(0, 4000)
+      }
+    },
+    read_student_summary: {
+      description: "Read AI summary, risks, and suggestions for a specific student",
+      parameters: { type: "object", properties: { student_id: { type: "string" } }, required: ["student_id"] },
+      execute: async (args) => {
+        const sum = loadSummary(args.student_id)
+        if (!sum) return "No AI summary available."
+        return JSON.stringify({ summary: sum.summary, risks: sum.risks, suggestions: sum.suggestions })
+      }
+    },
+    read_student_tasks: {
+      description: "Read all tasks for a specific student",
+      parameters: { type: "object", properties: { student_id: { type: "string" } }, required: ["student_id"] },
+      execute: async (args) => {
+        const tasks = getTasksByStudent(args.student_id)
+        return JSON.stringify(tasks.map(t => ({ task_id: t.task_id, title: t.title, status: t.status, deadline: t.deadline, priority: t.priority, source: t.source })))
+      }
+    },
+    search_knowledge_base: {
+      description: "Search the lab knowledge base by keyword",
+      parameters: { type: "object", properties: { query: { type: "string" } }, required: ["query"] },
+      execute: async (args) => {
+        try { const results = searchKnowledge(args.query, 5); return JSON.stringify(results.map(r => ({ title: r.title, snippet: r.snippet, score: r.score }))) }
+        catch (e) { return "KB search error: " + e.message }
+      }
+    }
+  }
+}
+
+
 // --- Page Routes ---
 app.get('/', (req, res) => {
   const sid = (req.headers.cookie || '').match(/sid=([^;]+)/)?.[1]
@@ -373,35 +503,24 @@ app.get('/api/chat/:id', requireAuth, (req, res) => {
   res.json({ messages: history })
 })
 
-app.post('/api/chat/:id', requireAuth, (req, res) => {
+app.post('/api/chat/:id', requireAuth, async (req, res) => {
   const studentId = req.user.role === 'teacher' ? req.params.id : req.user.id
   const { message } = req.body
   if (!message || !message.trim()) {
     return res.status(400).json({ error: 'Empty message' })
   }
 
-  // Load student report + summary + chat history
   const config = loadConfig()
   const reportPath = getLatestReport(config, studentId)
   if (!reportPath) {
     return res.status(404).json({ error: 'No report found for this student' })
   }
 
-  const report = parseReport(reportPath)
-  const summary = loadSummary(studentId)
+  const student = loadStudents().find(s => s.id === studentId)
   const chatHistory = loadChat(studentId)
 
-  // Save teacher message
+  // Save user message
   saveMessage(studentId, 'user', message)
-
-  // Build AI context + inject student memory
-  let vcContext = ''
-  try {
-    vcContext = buildStudentContext(studentId)
-  } catch (e) {
-    console.error('[chat] buildStudentContext error:', e.message)
-  }
-  const aiMessages = injectContext(buildChatMessages(report, summary, chatHistory, message, vcContext), studentId)
 
   // SSE headers
   res.setHeader('Content-Type', 'text/event-stream; charset=utf-8')
@@ -409,29 +528,52 @@ app.post('/api/chat/:id', requireAuth, (req, res) => {
   res.setHeader('Connection', 'keep-alive')
   res.flushHeaders()
 
+  // Build system prompt: student basic info + value cycle context
+  let vcContext = ''
+  try { vcContext = buildStudentContext(studentId) || '' } catch (e) { console.error('[chat] vcContext error:', e.message) }
+  const studentName = student ? student.name : studentId
+  const studentProject = student ? (student.project || 'N/A') : 'N/A'
+  const system = 'You are a research lab AI assistant for student ' + studentName + ' (' + studentId + '), project: ' + studentProject + '. ' +
+    'You have tools to read the student weekly report, AI summary, tasks, meeting actions, and search the knowledge base. ' +
+    'Use tools to gather context BEFORE answering. Answer in Chinese. Be concise and actionable.\n\n' + vcContext
+
+  // Build message history (last 10 messages, excluding the new one already saved)
+  const recentHistory = chatHistory.slice(-11, -1).map(h => ({
+    role: h.role === 'user' ? 'user' : 'assistant',
+    content: h.content
+  }))
+
+  // Tools
+  const tools = buildReportTools(studentId, config)
+
   let fullText = ''
-
-  // Stream AI response
-  chatStream(aiMessages, (chunk) => {
-    fullText += chunk
-    const data = JSON.stringify({ chunk })
-    res.write(`data: ${data}\n\n`)
-  }).then(() => {
-    // Save AI response to chat history
-    saveMessage(studentId, 'assistant', fullText)
-    res.write(`data: ${JSON.stringify({ done: true })}\n\n`)
+  try {
+    await runAgentLoop({
+      system,
+      messages: [...recentHistory, { role: 'user', content: message }],
+      tools,
+      maxIter: 5,
+      onChunk: (text) => {
+        fullText += text
+        res.write('data: ' + JSON.stringify({ chunk: text }) + '\n\n')
+      },
+      onToolCall: (name, args) => {
+        res.write('data: ' + JSON.stringify({ tool: name, args }) + '\n\n')
+      },
+    })
+    // Save AI response
+    if (fullText) saveMessage(studentId, 'assistant', fullText)
+    res.write('data: ' + JSON.stringify({ done: true }) + '\n\n')
     res.end()
-  }).catch((e) => {
-    console.error('[chat] stream error:', e.message)
-    res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`)
+  } catch (e) {
+    console.error('[chat] agent loop error:', e.message)
+    res.write('data: ' + JSON.stringify({ error: e.message }) + '\n\n')
     res.end()
- })
+  }
 
-  // Handle client disconnect (res, not req — req 'close' fires when POST body is received, killing SSE before chatStream starts)
-  res.on('close', () => {
-    // client went away; chatStream .then/.catch still calls res.end() safely
-  })
+  res.on('close', () => {})
 })
+
 
 // --- API: Brief (dashboard data) ---
 app.get('/api/brief', requireRole('teacher'), (req, res) => {
@@ -2470,37 +2612,55 @@ app.post('/api/global-chat', requireAuth, async (req, res) => {
   const u = req.user
   const message = req.body?.message?.trim()
   if (!message) { res.status(400).json({ error: 'no message' }); return }
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive'
-  })
+
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Connection', 'keep-alive')
+  res.flushHeaders()
+
+  const config = loadConfig()
   let agentId = req.body?.agent_id || 'manager'
   let sys = AGENT_PROMPTS[agentId] || AGENT_PROMPTS.manager
-  let ctx = ''
+  let vcContext = ''
+  let tools = {}
+
   if (u.role === 'teacher') {
-    try { ctx = buildManagerContext() } catch {}
-    // sys already set by agent_id above
+    try { vcContext = buildManagerContext() } catch {}
+    tools = buildTeacherOverviewTools(config)
+    sys += ' You have tools to read all students status, specific student reports/summaries/tasks, and search the knowledge base. Use tools BEFORE answering.'
   } else {
-    try { ctx = await buildStudentContext(u.id) || '' } catch {}
-    sys = AGENT_PROMPTS[agentId] || AGENT_PROMPTS.caio || '你是学生AI助手。简洁回答。'
+    try { vcContext = await buildStudentContext(u.id) || '' } catch {}
+    sys = AGENT_PROMPTS[agentId] || AGENT_PROMPTS.caio || 'You are a student AI assistant. Answer in Chinese. Be concise.'
+    tools = buildReportTools(u.id, config)
+    sys += ' You have tools to read your weekly report, AI summary, tasks, meeting actions, and search the knowledge base. Use tools BEFORE answering.'
   }
-  const msgs = [
-    { role: 'system', content: sys + '\n' + ctx },
-    { role: 'user', content: message }
-  ]
+
+  const system = sys + '\n\n' + vcContext
+
   let fullText = ''
-  chatStream(msgs, (chunk) => {
-    fullText += chunk
-    res.write('data: ' + JSON.stringify({ content: chunk }) + '\n\n')
-  }).then(() => {
-    res.write('data: [DONE]\n\n')
+  try {
+    await runAgentLoop({
+      system,
+      messages: [{ role: 'user', content: message }],
+      tools,
+      maxIter: 5,
+      onChunk: (text) => {
+        fullText += text
+        res.write('data: ' + JSON.stringify({ chunk: text }) + '\n\n')
+      },
+      onToolCall: (name, args) => {
+        res.write('data: ' + JSON.stringify({ tool: name, args }) + '\n\n')
+      },
+    })
+    res.write('data: ' + JSON.stringify({ done: true }) + '\n\n')
     res.end()
-  }).catch(e => {
+  } catch (e) {
+    console.error('[global-chat] agent loop error:', e.message)
     res.write('data: ' + JSON.stringify({ error: e.message }) + '\n\n')
     res.end()
-  })
+  }
 })
+
 
 
 app.listen(PORT, () => {

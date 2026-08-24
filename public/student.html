@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EvoTeam - Student</title>
-<link rel="stylesheet" href="/css/app.css?v=0.8.1">
+<link rel="stylesheet" href="/css/app.css?v=0.8.2">
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -269,6 +269,11 @@
       <div class="pane-left" style="display:flex; flex-direction:column">
         <div class="chat-messages" style="flex:1; overflow-y:auto; padding:12px">
           <div v-for="(msg, i) in assistantMessages" :key="i" :class="['chat-bubble', msg.role==='user' ? 'teacher' : 'ai']">
+            <div v-if="msg.toolCalls && msg.toolCalls.length" class="tool-calls">
+              <div v-for="(tc, ti) in msg.toolCalls" :key="ti" class="tool-call-item">
+                <span class="tool-icon">🔧</span> {{ toolLabels[tc.name] || tc.name }}...
+              </div>
+            </div>
             <div v-html="formatMessage(msg.content)"></div>
           </div>
           <div v-if="assistantStreaming" class="chat-bubble ai">
@@ -733,6 +738,11 @@
       <div class="global-chat-body" v-show="globalChatExpanded">
         <div class="global-chat-messages" ref="globalChatEl">
           <div v-for="(msg, i) in globalChatMessages" :key="i" class="chat-bubble" :class="msg.role">
+            <div v-if="msg.toolCalls && msg.toolCalls.length" class="tool-calls">
+              <div v-for="(tc, ti) in msg.toolCalls" :key="ti" class="tool-call-item">
+                <span class="tool-icon">🔧</span> {{ toolLabels[tc.name] || tc.name }}...
+              </div>
+            </div>
             <div v-html="formatMessage(msg.content)"></div>
           </div>
         </div>
@@ -745,7 +755,7 @@
     </main>
   </div>
 </div>
-<script src="/js/api.js?v=0.8.1"></script>
-<script src="/js/student.js?v=0.8.1"></script>
+<script src="/js/api.js?v=0.8.2"></script>
+<script src="/js/student.js?v=0.8.2"></script>
 </body>
 </html>

@@ -8,7 +8,7 @@
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<link rel="stylesheet" href="/css/app.css?v=0.8.1">
+<link rel="stylesheet" href="/css/app.css?v=0.8.2">
 </head>
 <body>
 <div id="app">
@@ -216,6 +216,11 @@
           </div>
           <div v-for="(msg, i) in chatMessages" :key="i"
                class="chat-bubble" :class="msg.role">
+            <div v-if="msg.toolCalls && msg.toolCalls.length" class="tool-calls">
+              <div v-for="(tc, ti) in msg.toolCalls" :key="ti" class="tool-call-item">
+                <span class="tool-icon">🔧</span> {{ toolLabels[tc.name] || tc.name }}...
+              </div>
+            </div>
             <div v-html="formatMessage(msg.content)"></div>
           </div>
         </div>
@@ -1836,6 +1841,11 @@
       <div class="global-chat-body" v-show="globalChatExpanded">
         <div class="global-chat-messages" ref="globalChatEl">
           <div v-for="(msg, i) in globalChatMessages" :key="i" class="chat-bubble" :class="msg.role">
+            <div v-if="msg.toolCalls && msg.toolCalls.length" class="tool-calls">
+              <div v-for="(tc, ti) in msg.toolCalls" :key="ti" class="tool-call-item">
+                <span class="tool-icon">🔧</span> {{ toolLabels[tc.name] || tc.name }}...
+              </div>
+            </div>
             <div v-html="formatMessage(msg.content)"></div>
           </div>
         </div>
@@ -1851,7 +1861,7 @@
 
 
 
-<script src="/js/api.js?v=0.8.1"></script>
-<script src="/js/teacher.js?v=0.8.1"></script>
+<script src="/js/api.js?v=0.8.2"></script>
+<script src="/js/teacher.js?v=0.8.2"></script>
 </body>
 </html>
